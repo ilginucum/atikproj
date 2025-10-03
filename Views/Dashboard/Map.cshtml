@@ -1,0 +1,384 @@
+@model AtikProj.Models.MapViewModel
+@{
+    ViewData["Title"] = "Atık Noktaları Haritası";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .map-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .map-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-back:hover {
+            background: white;
+            color: var(--primary-color);
+            transform: translateX(-4px);
+        }
+
+        #map {
+            width: 100%;
+            height: calc(100vh - 120px);
+            border-radius: 0;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 250px;
+        }
+
+        .legend h5 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 0.8rem;
+            border: 3px solid rgba(0,0,0,0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .legend-text {
+            font-size: 0.95rem;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .leaflet-popup-content {
+            margin: 1rem;
+            min-width: 250px;
+        }
+
+        .popup-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .popup-total {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+            color: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .popup-atik-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .popup-atik-kod {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .popup-atik-adi {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .popup-atik-miktar {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .stats-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+
+        .stats-box h6 {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .stats-box .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-top: 0.3rem;
+        }
+
+        @@media (max-width: 768px) {
+            .legend {
+                bottom: 10px;
+                right: 10px;
+                min-width: 200px;
+                padding: 1rem;
+            }
+
+            #map {
+                height: calc(100vh - 100px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="map-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <a href="@Url.Action("Index", "Dashboard")" class="btn-back me-3">
+                        <i class="fas fa-arrow-left me-2"></i>Geri Dön
+                    </a>
+                    <h1><i class="fas fa-map-marked-alt me-2"></i>Gebze Atık Toplama Noktaları</h1>
+                </div>
+                <div class="text-end">
+                    <small class="d-block opacity-75">Toplam Nokta</small>
+                    <strong style="font-size: 1.3rem;">@Model.AtikNoktaları.Count</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Harita -->
+    <div id="map"></div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <h5><i class="fas fa-info-circle me-2"></i>Atık Seviyeleri</h5>
+        
+        <div class="stats-box">
+            <h6>Toplam Atık</h6>
+            <div class="value">@Model.AtikNoktaları.Sum(n => n.ToplamMiktar).ToString("F1") ton</div>
+        </div>
+
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #10b981;"></div>
+            <div class="legend-text">
+                <strong>Düşük</strong>
+                <br>
+                <small>0 - 3 ton</small>
+            </div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #f59e0b;"></div>
+            <div class="legend-text">
+                <strong>Orta</strong>
+                <br>
+                <small>3 - 7 ton</small>
+            </div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ef4444;"></div>
+            <div class="legend-text">
+                <strong>Yüksek</strong>
+                <br>
+                <small>7+ ton</small>
+            </div>
+        </div>
+
+        <hr style="margin: 1rem 0;">
+
+        <small class="text-muted d-block">
+            <i class="fas fa-mouse-pointer me-1"></i>
+            Detaylar için noktalara tıklayın
+        </small>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        console.log("Script başladı");
+        
+        // Leaflet kontrolü
+        if (typeof L === 'undefined') {
+            console.error("Leaflet yüklenemedi!");
+            alert("Harita kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.");
+        } else {
+            console.log("Leaflet yüklendi:", L.version);
+        }
+
+        // Haritayı oluştur
+        try {
+            var map = L.map('map').setView([40.8023, 29.4310], 12);
+            console.log("Harita oluşturuldu");
+
+            // OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+            console.log("Tile layer eklendi");
+
+            // Atık noktaları verisi
+            var noktalarJson = '@Html.Raw(Json.Serialize(Model.AtikNoktaları))';
+            console.log("Noktalar JSON uzunluğu:", noktalarJson.length);
+            
+            var noktalar = JSON.parse(noktalarJson);
+            console.log("Nokta sayısı:", noktalar.length);
+            
+            if (noktalar.length > 0) {
+                console.log("İlk nokta:", noktalar[0]);
+            }
+
+            // Özel marker icon fonksiyonu
+            function createCustomIcon(color) {
+                return L.divIcon({
+                    className: 'custom-marker',
+                    html: '<div style="background-color: ' + color + '; width: 30px; height: 30px; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash-alt" style="color: white; font-size: 14px;"></i></div>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    popupAnchor: [0, -15]
+                });
+            }
+
+            // Her nokta için marker ekle
+            noktalar.forEach(function(nokta, index) {
+                console.log("İşlenen nokta " + (index + 1) + ":", nokta.NoktaAdi);
+                
+                // Atiklar kontrolü - ÖNEMLI!
+                if (!nokta.Atiklar || !Array.isArray(nokta.Atiklar)) {
+                    console.warn("Nokta " + (index + 1) + " için Atiklar bulunamadı:", nokta);
+                    nokta.Atiklar = []; // Boş array ata
+                }
+                
+                console.log("  - Koordinat:", nokta.Enlem, nokta.Boylam);
+                console.log("  - Toplam Miktar:", nokta.ToplamMiktar);
+                console.log("  - Atık sayısı:", nokta.Atiklar.length);
+                
+                // Renk belirleme
+                var color = '#10b981'; // Yeşil
+                if (nokta.ToplamMiktar >= 7) {
+                    color = '#ef4444'; // Kırmızı
+                } else if (nokta.ToplamMiktar >= 3) {
+                    color = '#f59e0b'; // Sarı
+                }
+
+                // Popup içeriği
+                var atikListesi = '';
+                nokta.Atiklar.forEach(function(atik) {
+                    atikListesi += '<div class="popup-atik-item">' +
+                        '<div>' +
+                        '<div class="popup-atik-kod">' + atik.AtikKodu + '</div>' +
+                        '<div class="popup-atik-adi">' + atik.AtikAdi + '</div>' +
+                        '</div>' +
+                        '<div class="popup-atik-miktar">' + atik.Miktar.toFixed(2) + ' ton</div>' +
+                        '</div>';
+                });
+
+                var popupContent = '<div class="popup-title">' +
+                    '<i class="fas fa-map-marker-alt me-2"></i>' + nokta.NoktaAdi +
+                    '</div>' +
+                    '<div class="popup-total">' +
+                    '<i class="fas fa-weight-hanging me-2"></i>' + nokta.ToplamMiktar.toFixed(2) + ' ton' +
+                    '</div>' +
+                    '<div>' + atikListesi + '</div>';
+
+                // Marker oluştur
+                var marker = L.marker([nokta.Enlem, nokta.Boylam], {
+                    icon: createCustomIcon(color)
+                }).addTo(map);
+
+                console.log("  ✓ Marker eklendi");
+
+                // Popup ekle
+                marker.bindPopup(popupContent, {
+                    maxWidth: 300
+                });
+
+                // Hover efekti
+                marker.on('mouseover', function() {
+                    this.openPopup();
+                });
+            });
+
+            console.log("✓ Tüm markerlar başarıyla eklendi. Toplam:", noktalar.length);
+
+        } catch (error) {
+            console.error("Harita oluşturma hatası:", error);
+            alert("Harita oluşturulurken hata: " + error.message);
+        }
+    </script>
+</body>
+</html>

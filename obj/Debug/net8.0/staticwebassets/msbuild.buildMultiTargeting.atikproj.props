@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="../build/atikproj.props" />
+</Project>

@@ -1,0 +1,399 @@
+@model AtikProj.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "XYZ Atık Takip Sistemi";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .metric-label {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-custom {
+            height: 30px;
+            border-radius: 15px;
+            background-color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        .progress-bar-custom {
+            background: linear-gradient(90deg, var(--success-color) 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            transition: width 0.6s ease;
+        }
+
+        .progress-bar-custom.warning {
+            background: linear-gradient(90deg, var(--warning-color) 0%, #d97706 100%);
+        }
+
+        .progress-bar-custom.danger {
+            background: linear-gradient(90deg, var(--danger-color) 0%, #dc2626 100%);
+        }
+
+        .atik-nokta-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary-color);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            transition: all 0.2s;
+        }
+
+        .atik-nokta-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(4px);
+        }
+
+        .badge-custom {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .table-custom {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .table-custom thead {
+            background-color: #f1f5f9;
+        }
+
+        .table-custom th {
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+        }
+
+        .table-custom td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .icon-wrapper {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--primary-color);
+            display: inline-block;
+        }
+
+        .btn-map {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s;
+        }
+
+        .btn-map:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        .btn-map i {
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-2"><i class="fas fa-recycle me-2"></i>XYZ Atık Yönetim Sistemi</h1>
+                    <p class="mb-0 opacity-75">Gerçek Zamanlı Atık Takip Dashboard'u</p>
+                </div>
+                <div class="text-end">
+                    <a href="@Url.Action("Map", "Dashboard")" class="btn btn-map mb-2">
+                        <i class="fas fa-map-marked-alt"></i>Haritada Görüntüle
+                    </a>
+                    <br>
+                    <small class="d-block opacity-75">Son Güncelleme</small>
+                    <strong>@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Ana Metrikler -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="icon-wrapper" style="background-color: #dbeafe; color: var(--primary-color);">
+                        <i class="fas fa-trash-alt"></i>
+                    </div>
+                    <h2 class="metric-value text-primary">@Model.ToplamAktifAtik.ToString("F1") ton</h2>
+                    <p class="metric-label mb-0">Toplam Aktif Atık</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="icon-wrapper" style="background-color: #dcfce7; color: var(--success-color);">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h2 class="metric-value text-success">@Model.KalanMiktar.ToString("F1") ton</h2>
+                    <p class="metric-label mb-0">Hedefe Kalan</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="icon-wrapper" style="background-color: #fef3c7; color: var(--warning-color);">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h2 class="metric-value text-warning">@Model.AtikNoktaSayisi</h2>
+                    <p class="metric-label mb-0">Aktif Atık Noktası</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="metric-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Kamyon Sevkiyat Eşiği</h5>
+                <span class="badge-custom @(Model.DolulukYuzdesi >= 90 ? "bg-danger" : Model.DolulukYuzdesi >= 70 ? "bg-warning" : "bg-success")">
+                    @Model.DolulukYuzdesi.ToString("F1")% Dolu
+                </span>
+            </div>
+            <div class="progress-custom">
+                <div class="progress-bar-custom @(Model.DolulukYuzdesi >= 90 ? "danger" : Model.DolulukYuzdesi >= 70 ? "warning" : "")" 
+                     style="width: @Model.DolulukYuzdesi%">
+                    @Model.ToplamAktifAtik.ToString("F1") / @Model.HedefMiktar ton
+                </div>
+            </div>
+            <small class="text-muted mt-2 d-block">
+                <i class="fas fa-info-circle me-1"></i>
+                10 tona ulaşıldığında otomatik email bildirimi gönderilecektir.
+            </small>
+        </div>
+
+        <!-- Atık Noktaları ve Grafik -->
+        <div class="row">
+            <!-- Sol: Atık Noktaları Listesi -->
+            <div class="col-lg-8 mb-4">
+                <h3 class="section-title"><i class="fas fa-location-dot me-2"></i>Atık Noktaları</h3>
+                
+                @foreach (var nokta in Model.AtikNoktaları)
+                {
+                    <div class="atik-nokta-card">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">@nokta.NoktaAdi</h5>
+                                <span class="badge bg-secondary">@nokta.AtikSayisi Farklı Atık Türü</span>
+                            </div>
+                            <h4 class="text-primary mb-0">@nokta.ToplamMiktar.ToString("F2") ton</h4>
+                        </div>
+                        <div class="row">
+                            @foreach (var atik in nokta.Atiklar)
+                            {
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                        <div>
+                                            <small class="text-muted d-block">@atik.AtikKodu</small>
+                                            <strong>@atik.AtikAdi</strong>
+                                        </div>
+                                        <span class="badge bg-primary">@atik.Miktar.ToString("F2") ton</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Sağ: Atık Dağılım Grafiği -->
+            <div class="col-lg-4 mb-4">
+                <h3 class="section-title"><i class="fas fa-chart-pie me-2"></i>Atık Dağılımı</h3>
+                <div class="metric-card">
+                    <canvas id="atikDagılımChart" style="max-height: 300px;"></canvas>
+                    
+                    <div class="mt-4">
+                        @foreach (var dag in Model.AtikDagilim.Take(5))
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>@dag.AtikAdi</span>
+                                <strong class="text-primary">@dag.Miktar.ToString("F1") ton</strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geçmiş Sevkiyatlar -->
+        <div class="mb-5">
+            <h3 class="section-title"><i class="fas fa-truck me-2"></i>Geçmiş Sevkiyatlar</h3>
+            
+            <div class="table-custom">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-calendar me-2"></i>Tarih</th>
+                            <th><i class="fas fa-weight me-2"></i>Toplam Miktar</th>
+                            <th><i class="fas fa-map-pin me-2"></i>Nokta Sayısı</th>
+                            <th><i class="fas fa-info-circle me-2"></i>Detaylar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sevkiyat in Model.GecmisSevkiyatlar)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@sevkiyat.Tarih.ToString("dd.MM.yyyy")</strong>
+                                    <br>
+                                    <small class="text-muted">@sevkiyat.Tarih.ToString("HH:mm")</small>
+                                </td>
+                                <td>
+                                    <span class="badge-custom bg-success">
+                                        @sevkiyat.ToplamMiktar.ToString("F1") ton
+                                    </span>
+                                </td>
+                                <td>@sevkiyat.NoktaSayisi nokta</td>
+                                <td>
+                                    <small class="text-muted">@sevkiyat.Detaylar</small>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Atık Dağılım Grafiği
+        const ctx = document.getElementById('atikDagılımChart').getContext('2d');
+        
+        const labels = @Html.Raw(Json.Serialize(Model.AtikDagilim.Select(a => a.AtikAdi)));
+        const data = @Html.Raw(Json.Serialize(Model.AtikDagilim.Select(a => a.Miktar)));
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: [
+                        '#2563eb',
+                        '#10b981',
+                        '#f59e0b',
+                        '#ef4444',
+                        '#8b5cf6',
+                        '#ec4899',
+                        '#14b8a6',
+                        '#f97316'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.parsed.toFixed(1) + ' ton';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
