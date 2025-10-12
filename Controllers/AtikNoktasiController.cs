@@ -1,10 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using AtikProj.Models;
+using AtikProj.Services;
 
 namespace AtikProj.Controllers
 {
     public class AtikNoktasiController : Controller
     {
+        private readonly IAtikKayitService _atikKayitService;
+
+        public AtikNoktasiController(IAtikKayitService atikKayitService)
+        {
+            _atikKayitService = atikKayitService;
+        }
+
         public IActionResult AtikGirisi()
         {
             return View();
@@ -663,6 +671,8 @@ namespace AtikProj.Controllers
             ("10.11.14", "11 01 13 dışındaki cam cila çamurları"),
             ("10.11.15", "Saha içi atıksu arıtımından kaynaklanan katı atıklar")
         };
+        
+        
         // AJAX Validation Endpoint - HİBRİT YAKLAŞIM
         [HttpPost]
         public async Task<JsonResult> ValidateAtikKodu(string atikKodu)
@@ -675,7 +685,7 @@ namespace AtikProj.Controllers
                 });
             }
 
-            // 1. ADIM: SABİT LİSTEDE ARA (Hızlı - Memory'den)
+            // 1. SABİT LİSTEDE ARA
             var atik = sabitAtikKodlari.FirstOrDefault(a => a.Kod.Equals(atikKodu, StringComparison.OrdinalIgnoreCase));
             
             if (atik != default)
@@ -687,31 +697,75 @@ namespace AtikProj.Controllers
                 });
             }
 
-            // 2. ADIM: MONGODB'DE ARA (Yavaş ama dinamik - Gelecekte eklenecek)
-            // TODO: MongoDB servisi ile kontrol
-            // var mongoAtik = await _atikKodService.GetByKodAsync(atikKodu);
-            // if (mongoAtik != null) 
-            // {
-            //     return Json(new { 
-            //         valid = true, 
-            //         atikAdi = mongoAtik.Ad,
-            //         kaynak = "Özel Atık Listesi" 
-            //     });
-            // }
-
-            // 3. ADIM: HİÇBİR YERDE BULUNAMAZSA HATA DÖN
+            // 2. MONGODB'DE ARA (Gelecekte özel kodlar için)
+            
             return Json(new { 
                 valid = false, 
-                message = "Bu atık kodu sistemde bulunamadı! Lütfen doğru kod girdiğinizden emin olun." 
+                message = "Bu atık kodu sistemde bulunamadı!" 
             });
         }
 
-        // Form Submit Endpoint (Sonraki adımda ekleyeceğiz)
+        // YENİ: ATIK KAYDETME
         [HttpPost]
         public async Task<IActionResult> AtikKaydet(string atikKodu, string atikAdi, decimal miktar, string birim)
         {
-            // TODO: MongoDB'ye kaydetme işlemi buraya gelecek
-            return Json(new { success = true, message = "Atık başarıyla kaydedildi!" });
+            try
+            {
+                var atikKayit = new AtikKayit
+                {
+                    AtikKodu = atikKodu,
+                    AtikAdi = atikAdi,
+                    Miktar = miktar,
+                    Birim = birim,
+                    GirisTarihi = DateTime.Now,
+                    AtikNoktasiId = "TEMP_NOKTA_ID", // Şimdilik geçici, login gelince gerçek olacak
+                    GirenKullaniciId = "TEMP_USER_ID", // Şimdilik geçici
+                    SevkEdildiMi = false
+                };
+
+                await _atikKayitService.CreateAsync(atikKayit);
+
+                // 10 ton kontrolü
+                var toplamMiktar = await _atikKayitService.GetToplamAktifMiktarAsync();
+                
+                return Json(new { 
+                    success = true, 
+                    message = "Atık başarıyla kaydedildi!",
+                    toplamMiktar = toplamMiktar,
+                    uyari = toplamMiktar >= 10 ? "DİKKAT: Toplam atık 10 tonu aştı!" : null
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { 
+                    success = false, 
+                    message = "Hata: " + ex.Message 
+                });
+            }
+        }
+
+        public async Task<IActionResult> Panel()
+        {
+            // Şimdilik geçici ID, login gelince gerçek olacak
+            string atikNoktasiId = "TEMP_NOKTA_ID";
+            
+            var kayitlar = await _atikKayitService.GetByNoktaIdAsync(atikNoktasiId);
+            
+            return View(kayitlar.OrderByDescending(k => k.GirisTarihi).ToList());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AtikSil(string id)
+        {
+            try
+            {
+                await _atikKayitService.DeleteAsync(id);
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
     }
 }

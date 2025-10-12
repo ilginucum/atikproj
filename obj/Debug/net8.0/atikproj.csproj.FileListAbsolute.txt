@@ -6,6 +6,13 @@
 /Users/macbookpro/atikproj/bin/Debug/net8.0/atikproj.runtimeconfig.json
 /Users/macbookpro/atikproj/bin/Debug/net8.0/atikproj.dll
 /Users/macbookpro/atikproj/bin/Debug/net8.0/atikproj.pdb
+/Users/macbookpro/atikproj/bin/Debug/net8.0/DnsClient.dll
+/Users/macbookpro/atikproj/bin/Debug/net8.0/MongoDB.Bson.dll
+/Users/macbookpro/atikproj/bin/Debug/net8.0/MongoDB.Driver.dll
+/Users/macbookpro/atikproj/bin/Debug/net8.0/SharpCompress.dll
+/Users/macbookpro/atikproj/bin/Debug/net8.0/Snappier.dll
+/Users/macbookpro/atikproj/bin/Debug/net8.0/ZstdSharp.dll
+/Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.csproj.AssemblyReference.cache
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.GeneratedMSBuildEditorConfig.editorconfig
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.AssemblyInfoInputs.cache
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.AssemblyInfo.cs
@@ -24,6 +31,7 @@
 /Users/macbookpro/atikproj/obj/Debug/net8.0/scopedcss/Views/Shared/_Layout.cshtml.rz.scp.css
 /Users/macbookpro/atikproj/obj/Debug/net8.0/scopedcss/bundle/atikproj.styles.css
 /Users/macbookpro/atikproj/obj/Debug/net8.0/scopedcss/projectbundle/atikproj.bundle.scp.css
+/Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.csproj.Up2Date
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.dll
 /Users/macbookpro/atikproj/obj/Debug/net8.0/refint/atikproj.dll
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.pdb

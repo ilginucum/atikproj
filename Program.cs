@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using AtikProj.Services;
+using AtikProj.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,8 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = null; // Büyük/küçük harf korunur
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
+
+// MongoDB Configuration
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDbSettings"));
+
+// Dependency Injection - Services
+builder.Services.AddSingleton<IAtikKayitService, AtikKayitService>();
 
 var app = builder.Build();
 

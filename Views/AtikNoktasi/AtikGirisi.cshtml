@@ -334,7 +334,7 @@
                 checkFormValidity();
             });
 
-            // Form submit
+            // Form submit - MONGODB ENTEGRASYONU
             $('#atikGirisForm').on('submit', function(e) {
                 e.preventDefault();
                 
@@ -350,12 +350,19 @@
                     birim: $('#birim').val()
                 };
 
-                // TODO: Backend'e kaydetme işlemi
-                console.log('Form Data:', formData);
-                alert('Atık başarıyla kaydedildi! (Şimdilik console\'da)');
-                
-                // Formu temizle
-                resetForm();
+                // MongoDB'ye kaydet
+                $.post('/AtikNoktasi/AtikKaydet', formData, function(response) {
+                    if (response.success) {
+                        alert('✅ ' + response.message + 
+                              '\n\n📊 Toplam Aktif Atık: ' + response.toplamMiktar.toFixed(2) + ' ton' +
+                              (response.uyari ? '\n\n⚠️ ' + response.uyari : ''));
+                        resetForm();
+                    } else {
+                        alert('❌ Hata: ' + response.message);
+                    }
+                }).fail(function() {
+                    alert('❌ Bağlantı hatası! Lütfen tekrar deneyin.');
+                });
             });
 
             // Reset butonu
