@@ -13,6 +13,7 @@
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.MvcApplicationPartsAssemblyInfo.cache
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.RazorAssemblyInfo.cache
 /Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.RazorAssemblyInfo.cs
+/Users/macbookpro/atikproj/obj/Debug/net8.0/atikproj.sourcelink.json
 /Users/macbookpro/atikproj/obj/Debug/net8.0/staticwebassets.build.json
 /Users/macbookpro/atikproj/obj/Debug/net8.0/staticwebassets.development.json
 /Users/macbookpro/atikproj/obj/Debug/net8.0/staticwebassets/msbuild.atikproj.Microsoft.AspNetCore.StaticWebAssets.props

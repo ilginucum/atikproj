@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("atikproj")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ebd66152a21a393c93eeb1678e16b5d59d607797")]
 [assembly: System.Reflection.AssemblyProductAttribute("atikproj")]
 [assembly: System.Reflection.AssemblyTitleAttribute("atikproj")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
