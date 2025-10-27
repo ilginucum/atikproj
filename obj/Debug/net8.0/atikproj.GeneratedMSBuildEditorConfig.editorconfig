@@ -18,6 +18,18 @@ build_property.GenerateRazorMetadataSourceChecksumAttributes =
 build_property.MSBuildProjectDirectory = /Users/macbookpro/atikproj
 build_property._RazorSourceGeneratorDebug = 
 
+[/Users/macbookpro/atikproj/Views/Account/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9Mb2dpbi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/macbookpro/atikproj/Views/Account/Register.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9SZWdpc3Rlci5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/macbookpro/atikproj/Views/Account/Setup.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9TZXR1cC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/macbookpro/atikproj/Views/AtikNoktasi/AtikGirisi.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXRpa05va3Rhc2kvQXRpa0dpcmlzaS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 

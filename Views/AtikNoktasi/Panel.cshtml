@@ -1,7 +1,9 @@
 @model List<AtikProj.Models.AtikKayit>
 @{
     ViewData["Title"] = "Atık Yönetim Paneli";
-    var toplamMiktar = Model.Sum(m => m.MiktarTon);
+    var toplamMiktar = Model.Where(m => !m.SevkEdildiMi).Sum(m => m.MiktarTon);
+    var firmaAdi = ViewBag.FirmaAdi ?? "Firma";
+    var toplamAktif = ViewBag.ToplamAktifAtik ?? 0m;
 }
 
 <!DOCTYPE html>
@@ -27,6 +29,46 @@
 
         .main-container {
             padding: 2rem 0;
+        }
+
+        .header-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 2rem;
+        }
+
+        .btn-logout {
+            background: var(--danger-color);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-atik-girisi {
+            background: var(--success-color);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-atik-girisi:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
         }
 
         .stat-card {
@@ -132,6 +174,22 @@
             font-weight: 600;
         }
 
+        .badge-kati {
+            background: #f3f4f6;
+            color: #1f2937;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .badge-sivi {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
@@ -181,6 +239,14 @@
             margin-left: 10px;
         }
 
+        .image-preview {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
         @@keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -190,7 +256,28 @@
 <body>
     <div class="main-container">
         <div class="container">
-            <!-- Header Stats -->
+            <!-- Header Bar -->
+            <div class="header-bar">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-1">
+                            <i class="fas fa-recycle text-success me-2"></i>
+                            @firmaAdi - Atık Paneli
+                        </h2>
+                        <small class="text-muted">Toplam Aktif Atık: <strong class="text-primary">@toplamAktif.ToString("F2") ton</strong></small>
+                    </div>
+                    <div>
+                        <a href="@Url.Action("AtikGirisi", "AtikNoktasi")" class="btn btn-atik-girisi me-2">
+                            <i class="fas fa-plus-circle me-1"></i> Yeni Atık Girişi
+                        </a>
+                        <a href="@Url.Action("Logout", "Account")" class="btn btn-logout">
+                            <i class="fas fa-sign-out-alt me-1"></i> Çıkış Yap
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- İstatistik Kartları -->
             <div class="row mb-4">
                 <div class="col-md-6">
                     <div class="stat-card">
@@ -208,15 +295,16 @@
                 </div>
             </div>
 
-            <!-- Yeni Atık Giriş Formu (Collapsible) -->
+            <!-- Yeni Atık Gir Butonu -->
             <button class="collapse-trigger" type="button" data-bs-toggle="collapse" data-bs-target="#formCollapse">
                 <span><i class="fas fa-plus-circle me-2"></i>Yeni Atık Gir</span>
                 <i class="fas fa-chevron-down"></i>
             </button>
 
+            <!-- Form (Collapsible) -->
             <div class="collapse" id="formCollapse">
                 <div class="form-card">
-                    <form id="atikGirisForm">
+                    <form id="atikGirisForm" enctype="multipart/form-data">
                         <div class="row">
                             <!-- Atık Kodu -->
                             <div class="col-md-6 mb-3">
@@ -238,16 +326,16 @@
                                 <input type="text" class="form-control" id="atikAdi" readonly>
                             </div>
 
-                            <!-- Miktar -->
-                            <div class="col-md-6 mb-3">
+                            <!-- Yaklaşık Atık Miktarı -->
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">
-                                    <i class="fas fa-weight me-1"></i>Miktar *
+                                    <i class="fas fa-weight me-1"></i>Yaklaşık Atık Miktarı *
                                 </label>
                                 <input type="number" class="form-control" id="miktar" step="0.01" min="0.01" placeholder="0.00" required>
                             </div>
 
                             <!-- Birim -->
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">
                                     <i class="fas fa-balance-scale me-1"></i>Birim *
                                 </label>
@@ -257,8 +345,37 @@
                                     <option value="Kg">Kg</option>
                                 </select>
                             </div>
+
+                            <!-- Hal Tipi -->
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-flask me-1"></i>Hal Tipi *
+                                </label>
+                                <select class="form-select" id="halTipi" required>
+                                    <option value="">Seçiniz</option>
+                                    <option value="Katı">Katı</option>
+                                    <option value="Sıvı">Sıvı</option>
+                                </select>
+                            </div>
+
+                            <!-- Adres -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Adres *
+                                </label>
+                                <textarea class="form-control" id="adres" rows="2" placeholder="Atığın bulunduğu adres" required></textarea>
+                            </div>
+
+                            <!-- Görsel -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-image me-1"></i>Görsel (Opsiyonel)
+                                </label>
+                                <input type="file" class="form-control" id="gorsel" accept="image/*">
+                            </div>
                         </div>
 
+                        <!-- Butonlar -->
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
                                 <i class="fas fa-save me-2"></i>Kaydet
@@ -271,7 +388,7 @@
                 </div>
             </div>
 
-            <!-- Geçmiş Atık Kayıtları -->
+            <!-- Geçmiş Kayıtlar Tablosu -->
             <div class="data-table">
                 <div class="table-header">
                     <h4 class="mb-0"><i class="fas fa-history me-2"></i>Geçmiş Atık Kayıtları</h4>
@@ -280,15 +397,16 @@
                 @if (Model.Any())
                 {
                     <div class="table-responsive">
-                        <table class="table" id="atikTable">
+                        <table class="table">
                             <thead>
                                 <tr>
                                     <th>Tarih</th>
                                     <th>Atık Kodu</th>
                                     <th>Atık Adı</th>
                                     <th>Miktar</th>
-                                    <th>Birim</th>
-                                    <th>Ton</th>
+                                    <th>Hal</th>
+                                    <th>Adres</th>
+                                    <th>Görsel</th>
                                     <th>İşlem</th>
                                 </tr>
                             </thead>
@@ -299,13 +417,42 @@
                                         <td>@kayit.GirisTarihi.ToString("dd.MM.yyyy HH:mm")</td>
                                         <td><code>@kayit.AtikKodu</code></td>
                                         <td>@kayit.AtikAdi</td>
-                                        <td><strong>@kayit.Miktar.ToString("F2")</strong></td>
                                         <td>
-                                            <span class="@(kayit.Birim == "Ton" ? "badge-ton" : "badge-kg")">
-                                                @kayit.Birim
-                                            </span>
+                                            <strong>@kayit.Miktar.ToString("F2")</strong>
+                                            <span class="@(kayit.Birim == "Ton" ? "badge-ton" : "badge-kg") ms-2">@kayit.Birim</span>
                                         </td>
-                                        <td>@kayit.MiktarTon.ToString("F3")</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(kayit.HalTipi))
+                                            {
+                                                <span class="@(kayit.HalTipi == "Katı" ? "badge-kati" : "badge-sivi")">
+                                                    @kayit.HalTipi
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(kayit.Adres))
+                                            {
+                                                @(kayit.Adres.Length > 30 ? kayit.Adres.Substring(0, 30) + "..." : kayit.Adres)
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(kayit.GorselUrl))
+                                            {
+                                                <img src="@kayit.GorselUrl" class="image-preview" onclick="window.open('@kayit.GorselUrl', '_blank')" />
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
                                         <td>
                                             <button class="btn-delete" onclick="deleteKayit('@kayit.Id')">
                                                 <i class="fas fa-trash-alt"></i>
@@ -362,48 +509,64 @@
         });
 
         // Form validation
-        $('#miktar, #birim').on('input change', checkForm);
+        $('#miktar, #birim, #halTipi, #adres').on('input change', checkForm);
 
         function checkForm() {
             var miktar = parseFloat($('#miktar').val());
             var birim = $('#birim').val();
-            $('#submitBtn').prop('disabled', !(kodGecerli && miktar > 0 && birim));
+            var halTipi = $('#halTipi').val();
+            var adres = $('#adres').val().trim();
+            $('#submitBtn').prop('disabled', !(kodGecerli && miktar > 0 && birim && halTipi && adres));
         }
 
         // Form submit
         $('#atikGirisForm').on('submit', function(e) {
             e.preventDefault();
 
-            var formData = {
-                atikKodu: $('#atikKodu').val(),
-                atikAdi: $('#atikAdi').val(),
-                miktar: $('#miktar').val(),
-                birim: $('#birim').val()
-            };
+            var formData = new FormData();
+            formData.append('atikKodu', $('#atikKodu').val());
+            formData.append('atikAdi', $('#atikAdi').val());
+            formData.append('miktar', $('#miktar').val());
+            formData.append('birim', $('#birim').val());
+            formData.append('halTipi', $('#halTipi').val());
+            formData.append('adres', $('#adres').val());
+            
+            var gorselFile = $('#gorsel')[0].files[0];
+            if (gorselFile) {
+                formData.append('gorsel', gorselFile);
+            }
 
-            $.post('/AtikNoktasi/AtikKaydet', formData, function(response) {
-                if (response.success) {
-                    alert('✅ Başarıyla kaydedildi!\n\n📊 Toplam: ' + response.toplamMiktar.toFixed(2) + ' ton' +
-                          (response.uyari ? '\n\n⚠️ ' + response.uyari : ''));
-                    location.reload(); // Sayfayı yenile
-                } else {
-                    alert('❌ Hata: ' + response.message);
+            $.ajax({
+                url: '/AtikNoktasi/AtikKaydet',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        alert('✅ Başarıyla kaydedildi!\n\n📊 Toplam: ' + response.toplamMiktar.toFixed(2) + ' ton' +
+                              (response.uyari ? '\n\n⚠️ ' + response.uyari : ''));
+                        location.reload();
+                    } else {
+                        alert('❌ Hata: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('❌ Bağlantı hatası!');
                 }
             });
         });
 
-        // Delete kayıt
+        // Kayıt silme
         function deleteKayit(id) {
             if (!confirm('Bu kaydı silmek istediğinizden emin misiniz?')) return;
 
             $.post('/AtikNoktasi/AtikSil', { id: id }, function(response) {
                 if (response.success) {
-                    $('tr[data-id="' + id + '"]').fadeOut(300, function() {
-                        $(this).remove();
-                        location.reload();
-                    });
+                    alert('✅ ' + response.message);
+                    location.reload();
                 } else {
-                    alert('❌ Silme hatası: ' + response.message);
+                    alert('❌ ' + response.message);
                 }
             });
         }

@@ -6,6 +6,7 @@
 /Users/macbookpro/atikproj/bin/Debug/net8.0/atikproj.runtimeconfig.json
 /Users/macbookpro/atikproj/bin/Debug/net8.0/atikproj.dll
 /Users/macbookpro/atikproj/bin/Debug/net8.0/atikproj.pdb
+/Users/macbookpro/atikproj/bin/Debug/net8.0/BCrypt.Net-Next.dll
 /Users/macbookpro/atikproj/bin/Debug/net8.0/DnsClient.dll
 /Users/macbookpro/atikproj/bin/Debug/net8.0/MongoDB.Bson.dll
 /Users/macbookpro/atikproj/bin/Debug/net8.0/MongoDB.Driver.dll

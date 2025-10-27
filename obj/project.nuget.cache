@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "//U/MPf1qAg=",
+  "dgSpecHash": "ZuOD7cK+JPw=",
   "success": true,
   "projectFilePath": "/Users/macbookpro/atikproj/atikproj.csproj",
   "expectedPackageFiles": [
+    "/Users/macbookpro/.nuget/packages/bcrypt.net-next/4.0.3/bcrypt.net-next.4.0.3.nupkg.sha512",
     "/Users/macbookpro/.nuget/packages/dnsclient/1.6.1/dnsclient.1.6.1.nupkg.sha512",
     "/Users/macbookpro/.nuget/packages/microsoft.extensions.logging.abstractions/2.0.0/microsoft.extensions.logging.abstractions.2.0.0.nupkg.sha512",
     "/Users/macbookpro/.nuget/packages/microsoft.netcore.platforms/5.0.0/microsoft.netcore.platforms.5.0.0.nupkg.sha512",

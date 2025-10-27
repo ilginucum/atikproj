@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "YIZNKTrKiDKXWbfEwwrB7dz9E08yiWLE6EQVHGlIFAk=",
+  "Hash": "jAO6y9ap+vdN/OTzuyHATlUJif/zDqf0zuHPPoV/nHQ=",
   "Source": "atikproj",
   "BasePath": "_content/atikproj",
   "Mode": "Default",
@@ -1193,6 +1193,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/lib/jquery/LICENSE.txt"
+    },
+    {
+      "Identity": "/Users/macbookpro/atikproj/wwwroot/uploads/85612fa3-24d6-48f7-b8e3-22f53561f56b.png",
+      "SourceId": "atikproj",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/macbookpro/atikproj/wwwroot/",
+      "BasePath": "_content/atikproj",
+      "RelativePath": "uploads/85612fa3-24d6-48f7-b8e3-22f53561f56b.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/uploads/85612fa3-24d6-48f7-b8e3-22f53561f56b.png"
     }
   ]
 }

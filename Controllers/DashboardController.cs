@@ -1,121 +1,84 @@
 using Microsoft.AspNetCore.Mvc;
 using AtikProj.Models;
+using AtikProj.Filters;
+using AtikProj.Services;
 
 namespace AtikProj.Controllers
 {
+    [AdminAuthorize]
     public class DashboardController : Controller
     {
-        public IActionResult Index()
+         private readonly IAtikKayitService _atikKayitService;
+         private readonly IKullaniciService _kullaniciService;
+         public DashboardController(IAtikKayitService atikKayitService, IKullaniciService kullaniciService) 
         {
-            // Mock Data
+            _atikKayitService = atikKayitService;
+            _kullaniciService = kullaniciService; 
+        }
+        public async Task<IActionResult> Index()
+        {
+            // MongoDB'den tüm aktif atık kayıtlarını getir
+            var tumAtiklar = await _atikKayitService.GetAktifAtiklar();
+            
+            // Toplam aktif atık miktarını hesapla
+            var toplamAktifAtik = tumAtiklar.Sum(a => a.MiktarTon);
+            
+            // Atık noktalarına göre grupla
+            // Atık noktalarına göre grupla
+            var atikNoktaGruplari = new List<AtikNoktaDetay>();
+
+            foreach (var grup in tumAtiklar.GroupBy(a => a.AtikNoktasiId))
+            {
+                var firmaAdi = await GetFirmaAdiAsync(grup.Key);
+                
+                atikNoktaGruplari.Add(new AtikNoktaDetay
+                {
+                    NoktaAdi = firmaAdi,
+                    ToplamMiktar = grup.Sum(a => a.MiktarTon),
+                    AtikSayisi = grup.Count(),
+                    Atiklar = grup.Select(a => new AtikDetay
+                    {
+                        AtikKodu = a.AtikKodu,
+                        AtikAdi = a.AtikAdi,
+                        Miktar = a.MiktarTon
+                    }).ToList()
+                });
+            }
+
+            atikNoktaGruplari = atikNoktaGruplari.OrderByDescending(n => n.ToplamMiktar).ToList();
+            
+            // Model oluştur
             var model = new DashboardViewModel
             {
-                ToplamAktifAtik = 7.8m,
+                ToplamAktifAtik = toplamAktifAtik,
                 HedefMiktar = 10m,
-                AtikNoktaSayisi = 20,
+                AtikNoktaSayisi = atikNoktaGruplari.Count,
+                AtikNoktaları = atikNoktaGruplari,
                 
-                AtikNoktaları = new List<AtikNoktaDetay>
-                {
-                    new AtikNoktaDetay
-                    {
-                        NoktaAdi = "Depo-1",
-                        ToplamMiktar = 2.3m,
-                        AtikSayisi = 3,
-                        Atiklar = new List<AtikDetay>
-                        {
-                            new AtikDetay { AtikKodu = "16.01.03", AtikAdi = "Lastikler", Miktar = 1.5m },
-                            new AtikDetay { AtikKodu = "20.01.01", AtikAdi = "Kağıt", Miktar = 0.5m },
-                            new AtikDetay { AtikKodu = "15.01.01", AtikAdi = "Plastik", Miktar = 0.3m }
-                        }
-                    },
-                    new AtikNoktaDetay
-                    {
-                        NoktaAdi = "Depo-2",
-                        ToplamMiktar = 1.5m,
-                        AtikSayisi = 2,
-                        Atiklar = new List<AtikDetay>
-                        {
-                            new AtikDetay { AtikKodu = "17.01.01", AtikAdi = "Beton", Miktar = 1.0m },
-                            new AtikDetay { AtikKodu = "16.01.03", AtikAdi = "Lastikler", Miktar = 0.5m }
-                        }
-                    },
-                    new AtikNoktaDetay
-                    {
-                        NoktaAdi = "Üretim Alanı-A",
-                        ToplamMiktar = 1.8m,
-                        AtikSayisi = 4,
-                        Atiklar = new List<AtikDetay>
-                        {
-                            new AtikDetay { AtikKodu = "12.01.01", AtikAdi = "Metal", Miktar = 0.8m },
-                            new AtikDetay { AtikKodu = "20.01.01", AtikAdi = "Kağıt", Miktar = 0.4m },
-                            new AtikDetay { AtikKodu = "15.01.02", AtikAdi = "Plastik Ambalaj", Miktar = 0.3m },
-                            new AtikDetay { AtikKodu = "16.01.03", AtikAdi = "Lastikler", Miktar = 0.3m }
-                        }
-                    },
-                    new AtikNoktaDetay
-                    {
-                        NoktaAdi = "Depo-3",
-                        ToplamMiktar = 0.9m,
-                        AtikSayisi = 2,
-                        Atiklar = new List<AtikDetay>
-                        {
-                            new AtikDetay { AtikKodu = "20.01.01", AtikAdi = "Kağıt", Miktar = 0.6m },
-                            new AtikDetay { AtikKodu = "15.01.01", AtikAdi = "Plastik", Miktar = 0.3m }
-                        }
-                    },
-                    new AtikNoktaDetay
-                    {
-                        NoktaAdi = "Üretim Alanı-B",
-                        ToplamMiktar = 1.3m,
-                        AtikSayisi = 3,
-                        Atiklar = new List<AtikDetay>
-                        {
-                            new AtikDetay { AtikKodu = "12.01.01", AtikAdi = "Metal", Miktar = 0.7m },
-                            new AtikDetay { AtikKodu = "17.01.01", AtikAdi = "Beton", Miktar = 0.4m },
-                            new AtikDetay { AtikKodu = "16.01.03", AtikAdi = "Lastikler", Miktar = 0.2m }
-                        }
-                    }
-                },
-
-                GecmisSevkiyatlar = new List<GecmisSevkiyat>
-                {
-                    new GecmisSevkiyat
-                    {
-                        Tarih = DateTime.Now.AddDays(-5),
-                        ToplamMiktar = 10.5m,
-                        NoktaSayisi = 12,
-                        Detaylar = "Depo-1, Depo-2, Üretim-A, ..."
-                    },
-                    new GecmisSevkiyat
-                    {
-                        Tarih = DateTime.Now.AddDays(-18),
-                        ToplamMiktar = 11.2m,
-                        NoktaSayisi = 15,
-                        Detaylar = "Depo-1, Depo-3, Üretim-B, ..."
-                    },
-                    new GecmisSevkiyat
-                    {
-                        Tarih = DateTime.Now.AddDays(-32),
-                        ToplamMiktar = 9.8m,
-                        NoktaSayisi = 11,
-                        Detaylar = "Depo-2, Üretim-A, Depo-5, ..."
-                    }
-                }
+                // Geçmiş sevkiyatlar şimdilik boş (ileride eklenecek)
+                GecmisSevkiyatlar = new List<GecmisSevkiyat>()
             };
-
+            
             // Atık türlerine göre dağılım hesapla
-            model.AtikDagilim = model.AtikNoktaları
-                .SelectMany(n => n.Atiklar)
+            model.AtikDagilim = tumAtiklar
                 .GroupBy(a => a.AtikAdi)
                 .Select(g => new AtikDagılım
                 {
                     AtikAdi = g.Key,
-                    Miktar = g.Sum(a => a.Miktar)
+                    Miktar = g.Sum(a => a.MiktarTon)
                 })
                 .OrderByDescending(a => a.Miktar)
                 .ToList();
-
+            
             return View(model);
+        }
+        private async Task<string> GetFirmaAdiAsync(string atikNoktasiId)
+        {
+            // Kullanıcı tablosundan firma adını bul
+            var kullanicilar = await _kullaniciService.GetAllAsync();
+            var kullanici = kullanicilar.FirstOrDefault(k => k.AtikNoktasiId == atikNoktasiId);
+            
+            return kullanici?.FirmaAdi ?? $"Firma {atikNoktasiId.Substring(0, Math.Min(8, atikNoktasiId.Length))}";
         }
 
     public IActionResult Map()

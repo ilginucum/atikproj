@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using AtikProj.Models;
 using AtikProj.Services;
+using AtikProj.Filters;
 
 namespace AtikProj.Controllers
 {
+    [Authorize]
     public class AtikNoktasiController : Controller
     {
         private readonly IAtikKayitService _atikKayitService;
@@ -11,6 +13,15 @@ namespace AtikProj.Controllers
         public AtikNoktasiController(IAtikKayitService atikKayitService)
         {
             _atikKayitService = atikKayitService;
+        }
+
+        private (string kullaniciId, string atikNoktasiId, string firmaAdi) GetCurrentUser()
+        {
+            var kullaniciId = HttpContext.Session.GetString("KullaniciId") ?? "";
+            var atikNoktasiId = HttpContext.Session.GetString("AtikNoktasiId") ?? "";
+            var firmaAdi = HttpContext.Session.GetString("FirmaAdi") ?? "";
+            
+            return (kullaniciId, atikNoktasiId, firmaAdi);
         }
 
         public IActionResult AtikGirisi()
@@ -707,29 +718,56 @@ namespace AtikProj.Controllers
 
         // YENİ: ATIK KAYDETME
         [HttpPost]
-        public async Task<IActionResult> AtikKaydet(string atikKodu, string atikAdi, decimal miktar, string birim)
+        public async Task<IActionResult> AtikKaydet(string atikKodu, string atikAdi, decimal miktar, string birim, string halTipi, string adres, IFormFile? gorsel)
         {
             try
             {
+                // Session'dan kullanıcı bilgilerini al
+                var (kullaniciId, atikNoktasiId, _) = GetCurrentUser();
+
+                string? gorselUrl = null;
+
+                if (gorsel != null && gorsel.Length > 0)
+                {
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                    if (!Directory.Exists(uploadsFolder))
+                        Directory.CreateDirectory(uploadsFolder);
+
+                    var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(gorsel.FileName);
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await gorsel.CopyToAsync(stream);
+                    }
+
+                    gorselUrl = "/uploads/" + uniqueFileName;
+                }
+
                 var atikKayit = new AtikKayit
                 {
                     AtikKodu = atikKodu,
                     AtikAdi = atikAdi,
                     Miktar = miktar,
                     Birim = birim,
+                    HalTipi = halTipi,
+                    Adres = adres,
+                    GorselUrl = gorselUrl,
                     GirisTarihi = DateTime.Now,
-                    AtikNoktasiId = "TEMP_NOKTA_ID", // Şimdilik geçici, login gelince gerçek olacak
-                    GirenKullaniciId = "TEMP_USER_ID", // Şimdilik geçici
+                    AtikNoktasiId = atikNoktasiId, // Gerçek kullanıcı ID'si
+                    GirenKullaniciId = kullaniciId, // Gerçek kullanıcı ID'si
                     SevkEdildiMi = false
                 };
 
                 await _atikKayitService.CreateAsync(atikKayit);
 
-                // 10 ton kontrolü
-                var toplamMiktar = await _atikKayitService.GetToplamAktifMiktarAsync();
-                
-                return Json(new { 
-                    success = true, 
+                // Sadece bu kullanıcının toplam aktif miktarını hesapla
+                var kullaniciKayitlari = await _atikKayitService.GetByNoktaIdAsync(atikNoktasiId);
+                var toplamMiktar = kullaniciKayitlari.Where(k => !k.SevkEdildiMi).Sum(k => k.MiktarTon);
+
+                return Json(new
+                {
+                    success = true,
                     message = "Atık başarıyla kaydedildi!",
                     toplamMiktar = toplamMiktar,
                     uyari = toplamMiktar >= 10 ? "DİKKAT: Toplam atık 10 tonu aştı!" : null
@@ -737,30 +775,49 @@ namespace AtikProj.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { 
-                    success = false, 
-                    message = "Hata: " + ex.Message 
-                });
+                return Json(new { success = false, message = "Hata: " + ex.Message });
             }
         }
 
         public async Task<IActionResult> Panel()
         {
-            // Şimdilik geçici ID, login gelince gerçek olacak
-            string atikNoktasiId = "TEMP_NOKTA_ID";
+            // Session'dan kullanıcının kendi atık noktası ID'sini al
+            var (_, atikNoktasiId, firmaAdi) = GetCurrentUser();
             
+            // Sadece bu kullanıcının kayıtlarını getir
             var kayitlar = await _atikKayitService.GetByNoktaIdAsync(atikNoktasiId);
+            
+            // Toplam aktif atık miktarını hesapla (sevk edilmemiş)
+            var toplamAktif = kayitlar.Where(k => !k.SevkEdildiMi).Sum(k => k.MiktarTon);
+            
+            ViewBag.FirmaAdi = firmaAdi;
+            ViewBag.ToplamAktifAtik = toplamAktif;
             
             return View(kayitlar.OrderByDescending(k => k.GirisTarihi).ToList());
         }
-
         [HttpPost]
         public async Task<IActionResult> AtikSil(string id)
         {
             try
             {
+                // Güvenlik kontrolü: Silinecek atık bu kullanıcıya ait mi?
+                var (_, atikNoktasiId, _) = GetCurrentUser();
+                
+                var atik = await _atikKayitService.GetByIdAsync(id);
+                
+                if (atik == null)
+                {
+                    return Json(new { success = false, message = "Atık bulunamadı!" });
+                }
+                
+                // Eğer atık bu kullanıcıya ait değilse silme izni verme
+                if (atik.AtikNoktasiId != atikNoktasiId)
+                {
+                    return Json(new { success = false, message = "Bu atığı silme yetkiniz yok!" });
+                }
+
                 await _atikKayitService.DeleteAsync(id);
-                return Json(new { success = true });
+                return Json(new { success = true, message = "Atık başarıyla silindi!" });
             }
             catch (Exception ex)
             {

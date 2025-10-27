@@ -19,6 +19,12 @@ namespace AtikProj.Models
         
         public string Birim { get; set; } = string.Empty;
         
+        public string HalTipi { get; set; } = string.Empty;
+        
+        public string Adres { get; set; } = string.Empty;
+        
+        public string? GorselUrl { get; set; }
+        
         public DateTime GirisTarihi { get; set; } = DateTime.Now;
         
         public string GirenKullaniciId { get; set; } = string.Empty;
@@ -27,7 +33,6 @@ namespace AtikProj.Models
         
         public string? SevkiyatId { get; set; }
 
-        // Ton cinsine çevirme
         [BsonIgnore]
         public decimal MiktarTon
         {

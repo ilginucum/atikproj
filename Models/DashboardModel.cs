@@ -23,6 +23,7 @@ namespace AtikProj.Models
         public decimal ToplamMiktar { get; set; }
         public int AtikSayisi { get; set; }
         public List<AtikDetay> Atiklar { get; set; } = new List<AtikDetay>();
+        public List<AtikKayit> AtikKayitlari { get; set; } = new List<AtikKayit>();
     }
 
     public class AtikDetay
