@@ -24,7 +24,6 @@ namespace AtikProj.Controllers
             var toplamAktifAtik = tumAtiklar.Sum(a => a.MiktarTon);
             
             // Atık noktalarına göre grupla
-            // Atık noktalarına göre grupla
             var atikNoktaGruplari = new List<AtikNoktaDetay>();
 
             foreach (var grup in tumAtiklar.GroupBy(a => a.AtikNoktasiId))
@@ -36,12 +35,7 @@ namespace AtikProj.Controllers
                     NoktaAdi = firmaAdi,
                     ToplamMiktar = grup.Sum(a => a.MiktarTon),
                     AtikSayisi = grup.Count(),
-                    Atiklar = grup.Select(a => new AtikDetay
-                    {
-                        AtikKodu = a.AtikKodu,
-                        AtikAdi = a.AtikAdi,
-                        Miktar = a.MiktarTon
-                    }).ToList()
+                    AtikKayitlari = grup.ToList() // Her atık kaydını ayrı ayrı sakla
                 });
             }
 
@@ -54,8 +48,6 @@ namespace AtikProj.Controllers
                 HedefMiktar = 10m,
                 AtikNoktaSayisi = atikNoktaGruplari.Count,
                 AtikNoktaları = atikNoktaGruplari,
-                
-                // Geçmiş sevkiyatlar şimdilik boş (ileride eklenecek)
                 GecmisSevkiyatlar = new List<GecmisSevkiyat>()
             };
             
