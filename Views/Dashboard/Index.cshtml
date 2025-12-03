@@ -39,6 +39,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             transition: transform 0.2s, box-shadow 0.2s;
             margin-bottom: 1.5rem;
+            height: 100%;
         }
 
         .metric-card:hover {
@@ -176,6 +177,7 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
             background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
         }
 
         .btn-map i {
@@ -197,6 +199,25 @@
             background: #dc2626;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            color: white;
+        }
+
+        .btn-bildirim {
+            background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-bildirim:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            color: white;
         }
 
         .collapse-header {
@@ -216,6 +237,17 @@
         .collapsed .chevron-icon {
             transform: rotate(-90deg);
         }
+
+        .card-footer-link {
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .card-footer-link:hover {
+            transform: translateX(5px);
+        }
     </style>
 </head>
 <body>
@@ -228,6 +260,9 @@
                     <p class="mb-0 opacity-75">Gerçek Zamanlı Atık Takip Dashboard'u</p>
                 </div>
                 <div class="text-end">
+                    <a href="@Url.Action("Bildirimler", "Dashboard")" class="btn btn-bildirim mb-2 me-2">
+                        <i class="fas fa-bell"></i> Bildirimler
+                    </a>
                     <a href="@Url.Action("Map", "Dashboard")" class="btn btn-map mb-2 me-2">
                         <i class="fas fa-map-marked-alt"></i>Haritada Görüntüle
                     </a>
@@ -245,7 +280,7 @@
     <div class="container">
         <!-- Ana Metrikler -->
         <div class="row mb-4">
-            <div class="col-md-4">
+            <div class="col-xl-3 col-md-6 mb-4">
                 <div class="metric-card">
                     <div class="icon-wrapper" style="background-color: #dbeafe; color: var(--primary-color);">
                         <i class="fas fa-trash-alt"></i>
@@ -254,7 +289,7 @@
                     <p class="metric-label mb-0">Toplam Aktif Atık</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-xl-3 col-md-6 mb-4">
                 <div class="metric-card">
                     <div class="icon-wrapper" style="background-color: #dcfce7; color: var(--success-color);">
                         <i class="fas fa-bullseye"></i>
@@ -263,13 +298,27 @@
                     <p class="metric-label mb-0">Hedefe Kalan</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-xl-3 col-md-6 mb-4">
                 <div class="metric-card">
                     <div class="icon-wrapper" style="background-color: #fef3c7; color: var(--warning-color);">
                         <i class="fas fa-map-marker-alt"></i>
                     </div>
                     <h2 class="metric-value text-warning">@Model.AtikNoktaSayisi</h2>
                     <p class="metric-label mb-0">Aktif Atık Noktası</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="metric-card">
+                    <div class="icon-wrapper" style="background-color: #fee2e2; color: var(--danger-color);">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h2 class="metric-value text-danger" id="bildirimSayisi">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </h2>
+                    <p class="metric-label mb-2">Okunmamış Bildirimler</p>
+                    <a href="@Url.Action("Bildirimler", "Dashboard")" class="card-footer-link text-danger">
+                        Bildirimleri Görüntüle <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
                 </div>
             </div>
         </div>
@@ -290,7 +339,7 @@
             </div>
             <small class="text-muted mt-2 d-block">
                 <i class="fas fa-info-circle me-1"></i>
-                10 tona ulaşıldığında otomatik email bildirimi gönderilecektir.
+                10 tona ulaşıldığında otomatik bildirim gönderilecektir.
             </small>
         </div>
 
@@ -452,8 +501,16 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
+        // Bildirim sayısını yükle
+        $(document).ready(function() {
+            $.get('@Url.Action("GetOkunmamisBildirimSayisi", "Dashboard")', function(data) {
+                $('#bildirimSayisi').text(data.sayi);
+            });
+        });
+
         // Atık Dağılım Grafiği
         const ctx = document.getElementById('atikDagılımChart').getContext('2d');
         

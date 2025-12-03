@@ -10,10 +10,13 @@ namespace AtikProj.Controllers
     {
          private readonly IAtikKayitService _atikKayitService;
          private readonly IKullaniciService _kullaniciService;
-         public DashboardController(IAtikKayitService atikKayitService, IKullaniciService kullaniciService) 
+         private readonly IBildirimService _bildirimService;
+
+        public DashboardController(IAtikKayitService atikKayitService, IKullaniciService kullaniciService, IBildirimService bildirimService) 
         {
             _atikKayitService = atikKayitService;
-            _kullaniciService = kullaniciService; 
+            _kullaniciService = kullaniciService;
+            _bildirimService = bildirimService;
         }
         public async Task<IActionResult> Index()
         {
@@ -71,6 +74,66 @@ namespace AtikProj.Controllers
             var kullanici = kullanicilar.FirstOrDefault(k => k.AtikNoktasiId == atikNoktasiId);
             
             return kullanici?.FirmaAdi ?? $"Firma {atikNoktasiId.Substring(0, Math.Min(8, atikNoktasiId.Length))}";
+        }
+
+        // Yeni action ekle:
+        public async Task<IActionResult> Bildirimler()
+        {
+            var bildirimler = await _bildirimService.GetAllAsync();
+            return View(bildirimler);
+        }
+
+        // API endpoint - okunmamış sayısı için
+        [HttpGet]
+        public async Task<JsonResult> GetOkunmamisBildirimSayisi()
+        {
+            var sayi = await _bildirimService.GetOkunmamisSayisi();
+            return Json(new { sayi });
+        }
+
+        // Bildirimi okundu işaretle
+        [HttpPost]
+        public async Task<JsonResult> BildirimOkundu(string id)
+        {
+            await _bildirimService.BildirimOkunduIsaretle(id);
+            return Json(new { success = true });
+        }
+
+        // Bildirimi tamamen sil (opsiyonel - admin isterse silebilir)
+        [HttpPost]
+        public async Task<JsonResult> BildirimSil(string id)
+        {
+            try
+            {
+                await _bildirimService.DeleteAsync(id);
+                return Json(new { success = true, message = "Bildirim silindi" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // Tüm okunmuş bildirimleri temizle
+        [HttpPost]
+        public async Task<JsonResult> OkunmuslariTemizle()
+        {
+            try
+            {
+                var tumBildirimler = await _bildirimService.GetAllAsync();
+                var okunmuslar = tumBildirimler.Where(b => b.Okundu).ToList();
+                
+                foreach (var bildirim in okunmuslar)
+                {
+                    await _bildirimService.DeleteAsync(bildirim.Id);
+                }
+                
+                return Json(new { success = true, message = $"{okunmuslar.Count} okunmuş bildirim temizlendi" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
 
     public IActionResult Map()

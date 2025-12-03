@@ -19,6 +19,7 @@ builder.Services.Configure<MongoDbSettings>(
 // Dependency Injection - Services
 builder.Services.AddSingleton<IAtikKayitService, AtikKayitService>();
 builder.Services.AddSingleton<IKullaniciService, KullaniciService>();
+builder.Services.AddScoped<IBildirimService, BildirimService>();
 
 // Session
 builder.Services.AddSession(options =>

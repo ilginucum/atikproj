@@ -9,10 +9,12 @@ namespace AtikProj.Controllers
     public class AtikNoktasiController : Controller
     {
         private readonly IAtikKayitService _atikKayitService;
+        private readonly IBildirimService _bildirimService;
 
-        public AtikNoktasiController(IAtikKayitService atikKayitService)
+        public AtikNoktasiController(IAtikKayitService atikKayitService, IBildirimService bildirimService)
         {
             _atikKayitService = atikKayitService;
+            _bildirimService = bildirimService;
         }
 
         private (string kullaniciId, string atikNoktasiId, string firmaAdi) GetCurrentUser()
@@ -716,13 +718,11 @@ namespace AtikProj.Controllers
             });
         }
 
-        // YENİ: ATIK KAYDETME
         [HttpPost]
         public async Task<IActionResult> AtikKaydet(string atikKodu, string atikAdi, decimal miktar, string birim, string halTipi, string adres, IFormFile? gorsel)
         {
             try
             {
-                // Session'dan kullanıcı bilgilerini al
                 var (kullaniciId, atikNoktasiId, _) = GetCurrentUser();
 
                 string? gorselUrl = null;
@@ -754,23 +754,110 @@ namespace AtikProj.Controllers
                     Adres = adres,
                     GorselUrl = gorselUrl,
                     GirisTarihi = DateTime.Now,
-                    AtikNoktasiId = atikNoktasiId, // Gerçek kullanıcı ID'si
-                    GirenKullaniciId = kullaniciId, // Gerçek kullanıcı ID'si
+                    AtikNoktasiId = atikNoktasiId,
+                    GirenKullaniciId = kullaniciId,
                     SevkEdildiMi = false
                 };
 
                 await _atikKayitService.CreateAsync(atikKayit);
 
-                // Sadece bu kullanıcının toplam aktif miktarını hesapla
+                // TOPLAM MİKTARI HESAPLA
+                var tumAktifAtiklar = await _atikKayitService.GetAktifAtiklar();
+                var toplamMiktar = tumAktifAtiklar.Sum(k => k.MiktarTon);
+
+                // Daha önce oluşturulan bildirimleri kontrol et
+                var mevcutBildirimler = await _bildirimService.GetAllAsync();
+                
+                // ⭐ 10 TON KONTROLÜ
+                if (toplamMiktar >= 10)
+                {
+                    var son10TonBildirimi = mevcutBildirimler
+                        .Where(b => b.BildirimTipi == "10TonUyarisi")
+                        .OrderByDescending(b => b.OlusturmaTarihi)
+                        .FirstOrDefault();
+
+                    bool yeni10TonBildirimi = false;
+                    
+                    if (son10TonBildirimi == null)
+                    {
+                        yeni10TonBildirimi = true;
+                    }
+                    else
+                    {
+                        var sonBildirimdenSonrakiAtiklar = tumAktifAtiklar
+                            .Where(a => a.GirisTarihi > son10TonBildirimi.OlusturmaTarihi)
+                            .ToList();
+                        
+                        if (sonBildirimdenSonrakiAtiklar.Any())
+                        {
+                            yeni10TonBildirimi = true;
+                        }
+                    }
+
+                    if (yeni10TonBildirimi)
+                    {
+                        var bildirim = new Bildirim
+                        {
+                            Mesaj = $"🚨 KRİTİK! Toplam aktif atık miktarı {toplamMiktar:F2} tona ulaştı. Sevkiyat planlaması ZORUNLUDUR!",
+                            OlusturmaTarihi = DateTime.Now,
+                            Okundu = false,
+                            ToplamMiktar = toplamMiktar,
+                            BildirimTipi = "10TonUyarisi"
+                        };
+
+                        await _bildirimService.CreateAsync(bildirim);
+                    }
+                }
+                // ⭐ 5 TON KONTROLÜ (10 tondan önce)
+                else if (toplamMiktar >= 5)
+                {
+                    var son5TonBildirimi = mevcutBildirimler
+                        .Where(b => b.BildirimTipi == "5TonUyarisi")
+                        .OrderByDescending(b => b.OlusturmaTarihi)
+                        .FirstOrDefault();
+
+                    bool yeni5TonBildirimi = false;
+                    
+                    if (son5TonBildirimi == null)
+                    {
+                        yeni5TonBildirimi = true;
+                    }
+                    else
+                    {
+                        var sonBildirimdenSonrakiAtiklar = tumAktifAtiklar
+                            .Where(a => a.GirisTarihi > son5TonBildirimi.OlusturmaTarihi)
+                            .ToList();
+                        
+                        if (sonBildirimdenSonrakiAtiklar.Any())
+                        {
+                            yeni5TonBildirimi = true;
+                        }
+                    }
+
+                    if (yeni5TonBildirimi)
+                    {
+                        var bildirim = new Bildirim
+                        {
+                            Mesaj = $"⚠️ DİKKAT! Toplam aktif atık miktarı {toplamMiktar:F2} tona ulaştı. Sevkiyat planlaması yapmaya hazırlanın.",
+                            OlusturmaTarihi = DateTime.Now,
+                            Okundu = false,
+                            ToplamMiktar = toplamMiktar,
+                            BildirimTipi = "5TonUyarisi"
+                        };
+
+                        await _bildirimService.CreateAsync(bildirim);
+                    }
+                }
+
                 var kullaniciKayitlari = await _atikKayitService.GetByNoktaIdAsync(atikNoktasiId);
-                var toplamMiktar = kullaniciKayitlari.Where(k => !k.SevkEdildiMi).Sum(k => k.MiktarTon);
+                var kullaniciToplamMiktar = kullaniciKayitlari.Where(k => !k.SevkEdildiMi).Sum(k => k.MiktarTon);
 
                 return Json(new
                 {
                     success = true,
                     message = "Atık başarıyla kaydedildi!",
-                    toplamMiktar = toplamMiktar,
-                    uyari = toplamMiktar >= 10 ? "DİKKAT: Toplam atık 10 tonu aştı!" : null
+                    toplamMiktar = kullaniciToplamMiktar,
+                    uyari = kullaniciToplamMiktar >= 10 ? "DİKKAT: Toplam atık 10 tonu aştı!" : null
                 });
             }
             catch (Exception ex)
@@ -778,7 +865,6 @@ namespace AtikProj.Controllers
                 return Json(new { success = false, message = "Hata: " + ex.Message });
             }
         }
-
         public async Task<IActionResult> Panel()
         {
             // Session'dan kullanıcının kendi atık noktası ID'sini al
@@ -817,6 +903,55 @@ namespace AtikProj.Controllers
                 }
 
                 await _atikKayitService.DeleteAsync(id);
+
+                // ⭐ SİLME SONRASI BİLDİRİM KONTROLÜ
+                var tumAktifAtiklar = await _atikKayitService.GetAktifAtiklar();
+                var toplamMiktar = tumAktifAtiklar.Sum(k => k.MiktarTon);
+
+                // Eğer miktar 10 tonun altına düştüyse ve 10 ton bildirimi varsa, bilgi bildirimi oluştur
+                if (toplamMiktar < 10)
+                {
+                    var mevcutBildirimler = await _bildirimService.GetAllAsync();
+                    var aktif10TonBildirimi = mevcutBildirimler
+                        .Where(b => b.BildirimTipi == "10TonUyarisi" && !b.Okundu)
+                        .OrderByDescending(b => b.OlusturmaTarihi)
+                        .FirstOrDefault();
+
+                    if (aktif10TonBildirimi != null)
+                    {
+                        // Okunmamış 10 ton bildirimini okundu yap
+                        await _bildirimService.BildirimOkunduIsaretle(aktif10TonBildirimi.Id);
+
+                        // Yeni bilgi bildirimi oluştur
+                        var bilgiBildirimi = new Bildirim
+                        {
+                            Mesaj = $"✅ BİLGİ: Atık silme işlemi sonrası toplam aktif atık {toplamMiktar:F2} tona düştü. Sevkiyat aciliyeti azaldı.",
+                            OlusturmaTarihi = DateTime.Now,
+                            Okundu = false,
+                            ToplamMiktar = toplamMiktar,
+                            BildirimTipi = "BilgiMesaji"
+                        };
+
+                        await _bildirimService.CreateAsync(bilgiBildirimi);
+                    }
+                }
+
+                // Eğer 5 tonun altına düştüyse ve 5 ton bildirimi varsa
+                if (toplamMiktar < 5)
+                {
+                    var mevcutBildirimler = await _bildirimService.GetAllAsync();
+                    var aktif5TonBildirimi = mevcutBildirimler
+                        .Where(b => b.BildirimTipi == "5TonUyarisi" && !b.Okundu)
+                        .OrderByDescending(b => b.OlusturmaTarihi)
+                        .FirstOrDefault();
+
+                    if (aktif5TonBildirimi != null)
+                    {
+                        // Okunmamış 5 ton bildirimini okundu yap
+                        await _bildirimService.BildirimOkunduIsaretle(aktif5TonBildirimi.Id);
+                    }
+                }
+
                 return Json(new { success = true, message = "Atık başarıyla silindi!" });
             }
             catch (Exception ex)

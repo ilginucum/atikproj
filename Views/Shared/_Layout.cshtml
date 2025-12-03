@@ -1,30 +1,89 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - atikproj</title>
+    <title>@ViewData["Title"] - Atık Yönetim Sistemi</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/atikproj.styles.css" asp-append-version="true" />
+    <style>
+        .bildirim-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .nav-link {
+            position: relative;
+        }
+    </style>
 </head>
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">atikproj</a>
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-recycle me-2"></i>Atık Yönetim
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+                        @if (Context.Session.GetString("KullaniciId") != null)
+                        {
+                            @if (Context.Session.GetString("Rol") == "Admin")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">
+                                        <i class="fas fa-chart-line me-1"></i>Dashboard
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Map">
+                                        <i class="fas fa-map-marked-alt me-1"></i>Harita
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark position-relative" asp-controller="Dashboard" asp-action="Bildirimler">
+                                        <i class="fas fa-bell me-1"></i>Bildirimler
+                                        <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle bildirim-badge" 
+                                              style="display: none;">
+                                            0
+                                        </span>
+                                    </a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="AtikNoktasi" asp-action="Panel">
+                                        <i class="fas fa-clipboard-list me-1"></i>Panelim
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="AtikNoktasi" asp-action="AtikGirisi">
+                                        <i class="fas fa-plus-circle me-1"></i>Atık Girişi
+                                    </a>
+                                </li>
+                            }
+                            
+                            <li class="nav-item ms-auto">
+                                <a class="nav-link text-danger" asp-controller="Account" asp-action="Logout">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Çıkış Yap
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Giriş</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Kayıt Ol</a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -35,15 +94,37 @@
             @RenderBody()
         </main>
     </div>
-
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2025 - atikproj - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            &copy; 2025 - Atık Yönetim Sistemi
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    @if (Context.Session.GetString("Rol") == "Admin")
+    {
+        <script>
+            // Bildirim sayısını güncelle
+            function guncelBildirimSayisi() {
+                $.get('@Url.Action("GetOkunmamisBildirimSayisi", "Dashboard")', function(data) {
+                    const badge = $('.bildirim-badge');
+                    if (data.sayi > 0) {
+                        badge.text(data.sayi).show();
+                    } else {
+                        badge.hide();
+                    }
+                });
+            }
+            
+            $(document).ready(function() {
+                guncelBildirimSayisi();
+                setInterval(guncelBildirimSayisi, 30000); // 30 saniyede bir
+            });
+        </script>
+    }
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
