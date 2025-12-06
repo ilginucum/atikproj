@@ -917,10 +917,10 @@ namespace AtikProj.Controllers
             var kayitlar = await _atikKayitService.GetByNoktaIdAsync(atikNoktasiId);
             var toplamAktif = kayitlar.Where(k => !k.SevkEdildiMi).Sum(k => k.MiktarTon);
             
-            // Kullanıcıya özel bildirimleri getir
+            // ⭐ SADECE BU KULLANICIYA AİT BİLDİRİMLERİ GETİR
             var tumBildirimler = await _bildirimService.GetAllAsync();
             var kullaniciBildirimleri = tumBildirimler
-                .Where(b => b.HedefKullaniciId == kullaniciId || b.BildirimTipi == "SevkiyatBildirimi")
+                .Where(b => b.HedefKullaniciId == kullaniciId) // ✅ Sadece bu kullanıcıya özel bildirimler
                 .OrderByDescending(b => b.OlusturmaTarihi)
                 .Take(5)
                 .ToList();

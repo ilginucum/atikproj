@@ -269,40 +269,48 @@ namespace AtikProj.Controllers
                     }
                 }
 
-                // Her fabrikaya bildirim gönder
+                // ⭐ SADECE SEVKİYATA DAHİL OLAN FİRMALARA BİLDİRİM GÖNDER
                 var tumKullanicilar = await _kullaniciService.GetAllAsync();
                 
-                foreach (var noktaId in atikNoktasiIds)
+                // Sevkiyata dahil olan atık noktalarının kullanıcılarını bul
+                var sevkiyatKullanicilari = tumKullanicilar
+                    .Where(k => atikNoktasiIds.Contains(k.AtikNoktasiId))
+                    .ToList();
+                
+                foreach (var kullanici in sevkiyatKullanicilari)
                 {
-                    var kullanici = tumKullanicilar.FirstOrDefault(k => k.AtikNoktasiId == noktaId);
-                    if (kullanici != null)
+                    // Bu kullanıcının sevkiyattaki atıklarını hesapla
+                    var kullanicininAtiklari = seciliAtiklar
+                        .Where(a => a.AtikNoktasiId == kullanici.AtikNoktasiId)
+                        .ToList();
+                    
+                    var kullaniciAtikMiktari = kullanicininAtiklari.Sum(a => a.MiktarTon);
+                    
+                    // Firma için özel mesaj oluştur
+                    var mesaj = $"🚚 Sevkiyat Planlandı! {sevkiyatTarihi.ToString("dd.MM.yyyy")} tarihinde {kullaniciAtikMiktari:F2} ton atığınız toplanacaktır. Lütfen hazır bulunun.";
+                    
+                    // Not varsa ekle
+                    if (!string.IsNullOrEmpty(notlar))
                     {
-                        // Firma için özel mesaj oluştur
-                        var mesaj = $"🚚 Sevkiyat Planlandı! {sevkiyatTarihi.ToString("dd.MM.yyyy")} tarihinde atıklarınız toplanacaktır. Lütfen hazır bulunun.";
-                        
-                        // Not varsa ekle
-                        if (!string.IsNullOrEmpty(notlar))
-                        {
-                            mesaj += $"\n\n📝 Not: {notlar}";
-                        }
-                        
-                        var fabrikaBildirimi = new Bildirim
-                        {
-                            Mesaj = mesaj,
-                            OlusturmaTarihi = DateTime.Now,
-                            Okundu = false,
-                            ToplamMiktar = seciliAtiklar.Where(a => a.AtikNoktasiId == noktaId).Sum(a => a.MiktarTon),
-                            BildirimTipi = "SevkiyatBildirimi",
-                            IlgiliSevkiyatId = sevkiyat.Id,
-                            HedefKullaniciId = kullanici.Id
-                        };
-
-                        await _bildirimService.CreateAsync(fabrikaBildirimi);
+                        mesaj += $"\n\n📝 Not: {notlar}";
                     }
+                    
+                    var fabrikaBildirimi = new Bildirim
+                    {
+                        Mesaj = mesaj,
+                        OlusturmaTarihi = DateTime.Now,
+                        Okundu = false,
+                        ToplamMiktar = kullaniciAtikMiktari, // Kullanıcının kendi atık miktarı
+                        BildirimTipi = "SevkiyatBildirimi",
+                        IlgiliSevkiyatId = sevkiyat.Id,
+                        HedefKullaniciId = kullanici.Id // ⭐ Sadece bu kullanıcıya özel
+                    };
+
+                    await _bildirimService.CreateAsync(fabrikaBildirimi);
                 }
 
                 // Admin'e de onay bildirimi
-                var adminMesaj = $"✅ Sevkiyat başarıyla planlandı! {atikNoktasiIds.Count} firma, {seciliAtiklar.Count} atık kaydı. Toplam: {toplamMiktar:F2} ton";
+                var adminMesaj = $"✅ Sevkiyat başarıyla planlandı! {sevkiyatKullanicilari.Count} firma, {seciliAtiklar.Count} atık kaydı. Toplam: {toplamMiktar:F2} ton";
                 
                 if (!string.IsNullOrEmpty(notlar))
                 {
@@ -316,14 +324,15 @@ namespace AtikProj.Controllers
                     Okundu = false,
                     ToplamMiktar = toplamMiktar,
                     BildirimTipi = "BilgiMesaji",
-                    IlgiliSevkiyatId = sevkiyat.Id
+                    IlgiliSevkiyatId = sevkiyat.Id,
+                    HedefKullaniciId = null // ⭐ Admin bildirimi (herkese görünür değil, sadece admin'e)
                 };
 
                 await _bildirimService.CreateAsync(adminBildirimi);
 
                 return Json(new { 
                     success = true, 
-                    message = $"Sevkiyat planlandı! {atikNoktasiIds.Count} firmaya bildirim gönderildi.",
+                    message = $"Sevkiyat planlandı! {sevkiyatKullanicilari.Count} firmaya bildirim gönderildi.",
                     sevkiyatId = sevkiyat.Id
                 });
             }
@@ -331,6 +340,140 @@ namespace AtikProj.Controllers
             {
                 return Json(new { success = false, message = "Hata: " + ex.Message });
             }
+        }
+
+        public async Task<IActionResult> GecmisSevkiyatlar(
+            string? atikKoduFiltre, 
+            string? atikAdiFiltre, 
+            DateTime? baslangicTarihi, 
+            DateTime? bitisTarihi,
+            string? durumFiltre,
+            string? halTipiFiltre,
+            string? firmaAdiFiltre)
+        {
+            // Tüm sevkiyatları getir
+            var tumSevkiyatlar = await _sevkiyatService.GetAllAsync();
+            var sevkiyatDetaylar = new List<SevkiyatDetayDto>();
+
+            foreach (var sevkiyat in tumSevkiyatlar)
+            {
+                var atikKayitlari = new List<AtikKayitDetayDto>();
+                
+                // Sevkiyattaki her atık kaydını getir
+                foreach (var atikId in sevkiyat.AtikKayitIds)
+                {
+                    var atik = await _atikKayitService.GetByIdAsync(atikId);
+                    if (atik != null)
+                    {
+                        var firmaAdi = await GetFirmaAdiAsync(atik.AtikNoktasiId);
+                        
+                        atikKayitlari.Add(new AtikKayitDetayDto
+                        {
+                            Id = atik.Id ?? "",
+                            AtikKodu = atik.AtikKodu,
+                            AtikAdi = atik.AtikAdi,
+                            Miktar = atik.Miktar,
+                            Birim = atik.Birim,
+                            HalTipi = atik.HalTipi,
+                            Adres = atik.Adres,
+                            GorselUrl = atik.GorselUrl,
+                            GirisTarihi = atik.GirisTarihi,
+                            FirmaAdi = firmaAdi,
+                            SevkEdildiMi = atik.SevkEdildiMi
+                        });
+                    }
+                }
+
+                sevkiyatDetaylar.Add(new SevkiyatDetayDto
+                {
+                    SevkiyatId = sevkiyat.Id ?? "",
+                    SevkiyatTarihi = sevkiyat.SevkiyatTarihi,
+                    Durum = sevkiyat.Durum,
+                    ToplamMiktar = sevkiyat.ToplamMiktar,
+                    Notlar = sevkiyat.Notlar,
+                    OlusturmaTarihi = sevkiyat.OlusturmaTarihi,
+                    FirmaSayisi = sevkiyat.AtikNoktasiIds.Count,
+                    AtikKayitSayisi = sevkiyat.AtikKayitIds.Count,
+                    AtikKayitlari = atikKayitlari
+                });
+            }
+
+            // FİLTRELEME
+            var filtreliSevkiyatlar = sevkiyatDetaylar.AsEnumerable();
+
+            // Atık Kodu Filtresi
+            if (!string.IsNullOrWhiteSpace(atikKoduFiltre))
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.AtikKayitlari.Any(a => 
+                        a.AtikKodu.Contains(atikKoduFiltre, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            // Atık Adı Filtresi
+            if (!string.IsNullOrWhiteSpace(atikAdiFiltre))
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.AtikKayitlari.Any(a => 
+                        a.AtikAdi.Contains(atikAdiFiltre, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            // Başlangıç Tarihi Filtresi
+            if (baslangicTarihi.HasValue)
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.SevkiyatTarihi.Date >= baslangicTarihi.Value.Date);
+            }
+
+            // Bitiş Tarihi Filtresi
+            if (bitisTarihi.HasValue)
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.SevkiyatTarihi.Date <= bitisTarihi.Value.Date);
+            }
+
+            // Durum Filtresi
+            if (!string.IsNullOrWhiteSpace(durumFiltre))
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.Durum.Equals(durumFiltre, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Hal Tipi Filtresi
+            if (!string.IsNullOrWhiteSpace(halTipiFiltre))
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.AtikKayitlari.Any(a => 
+                        a.HalTipi.Equals(halTipiFiltre, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            // Firma Adı Filtresi
+            if (!string.IsNullOrWhiteSpace(firmaAdiFiltre))
+            {
+                filtreliSevkiyatlar = filtreliSevkiyatlar
+                    .Where(s => s.AtikKayitlari.Any(a => 
+                        a.FirmaAdi.Contains(firmaAdiFiltre, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            var filtreliListe = filtreliSevkiyatlar
+                .OrderByDescending(s => s.SevkiyatTarihi)
+                .ToList();
+
+            var model = new GecmisSevkiyatlarViewModel
+            {
+                Sevkiyatlar = filtreliListe,
+                AtikKoduFiltre = atikKoduFiltre,
+                AtikAdiFiltre = atikAdiFiltre,
+                BaslangicTarihi = baslangicTarihi,
+                BitisTarihi = bitisTarihi,
+                DurumFiltre = durumFiltre,
+                HalTipiFiltre = halTipiFiltre,
+                FirmaAdiFiltre = firmaAdiFiltre,
+                ToplamSevkiyatSayisi = filtreliListe.Count,
+                ToplamAtikMiktari = filtreliListe.Sum(s => s.ToplamMiktar),
+                ToplamAtikKayitSayisi = filtreliListe.Sum(s => s.AtikKayitSayisi)
+            };
+
+            return View(model);
         }
     public IActionResult Map()
     {

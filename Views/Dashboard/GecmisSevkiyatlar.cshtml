@@ -1,0 +1,461 @@
+@model AtikProj.Models.GecmisSevkiyatlarViewModel
+@{
+    ViewData["Title"] = "Geçmiş Sevkiyatlar";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --secondary-color: #6366f1;
+        }
+
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #4f46e5 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .filter-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stats-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .sevkiyat-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .sevkiyat-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+
+        .sevkiyat-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            padding: 1.25rem;
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .sevkiyat-body {
+            padding: 1.5rem;
+        }
+
+        .atik-kayit-item {
+            background: #f8fafc;
+            border-left: 4px solid var(--success-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .atik-kayit-item:hover {
+            background: #f1f5f9;
+            border-left-color: var(--primary-color);
+        }
+
+        .badge-custom {
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .filter-input {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            transition: all 0.2s;
+        }
+
+        .filter-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-filter {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-filter:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-reset {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-reset:hover {
+            background: #475569;
+            color: white;
+        }
+
+        .btn-back {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            background: #dc2626;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .collapse-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapse-toggle:hover {
+            background-color: #f8fafc;
+            border-radius: 6px;
+        }
+
+        .chevron-icon {
+            transition: transform 0.3s;
+        }
+
+        .collapsed .chevron-icon {
+            transform: rotate(-90deg);
+        }
+
+        .gorsel-thumbnail {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gorsel-thumbnail:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-2"><i class="fas fa-history me-2"></i>Geçmiş Sevkiyatlar</h1>
+                    <p class="mb-0 opacity-75">Tüm sevkiyat kayıtları ve detayları</p>
+                </div>
+                <div>
+                    <a href="@Url.Action("Index", "Dashboard")" class="btn btn-back">
+                        <i class="fas fa-arrow-left me-2"></i>Dashboard'a Dön
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Özet İstatistikler -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-value text-primary">@Model.ToplamSevkiyatSayisi</div>
+                    <div class="stats-label"><i class="fas fa-truck me-1"></i>Toplam Sevkiyat</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-value text-success">@Model.ToplamAtikMiktari.ToString("F2") ton</div>
+                    <div class="stats-label"><i class="fas fa-weight me-1"></i>Toplam Atık Miktarı</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <div class="stats-value text-warning">@Model.ToplamAtikKayitSayisi</div>
+                    <div class="stats-label"><i class="fas fa-database me-1"></i>Toplam Atık Kaydı</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtreleme Paneli -->
+        <div class="filter-card">
+            <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Gelişmiş Filtreleme</h5>
+            
+            <form method="get" action="@Url.Action("GecmisSevkiyatlar", "Dashboard")">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-barcode me-1"></i>Atık Kodu</label>
+                        <input type="text" class="form-control filter-input" name="atikKoduFiltre" 
+                               value="@Model.AtikKoduFiltre" placeholder="Örn: 16.01.03">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-tag me-1"></i>Atık Adı</label>
+                        <input type="text" class="form-control filter-input" name="atikAdiFiltre" 
+                               value="@Model.AtikAdiFiltre" placeholder="Örn: Lastikler">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-building me-1"></i>Firma Adı</label>
+                        <input type="text" class="form-control filter-input" name="firmaAdiFiltre" 
+                               value="@Model.FirmaAdiFiltre" placeholder="Örn: GEBAŞ">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-info-circle me-1"></i>Durum</label>
+                        <select class="form-select filter-input" name="durumFiltre">
+                            <option value="">Tümü</option>
+                            <option value="Planlandı" @(Model.DurumFiltre == "Planlandı" ? "selected" : "")>Planlandı</option>
+                            <option value="Tamamlandı" @(Model.DurumFiltre == "Tamamlandı" ? "selected" : "")>Tamamlandı</option>
+                            <option value="İptal" @(Model.DurumFiltre == "İptal" ? "selected" : "")>İptal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-calendar-alt me-1"></i>Başlangıç Tarihi</label>
+                        <input type="date" class="form-control filter-input" name="baslangicTarihi" 
+                               value="@(Model.BaslangicTarihi?.ToString("yyyy-MM-dd"))">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-calendar-alt me-1"></i>Bitiş Tarihi</label>
+                        <input type="date" class="form-control filter-input" name="bitisTarihi" 
+                               value="@(Model.BitisTarihi?.ToString("yyyy-MM-dd"))">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label"><i class="fas fa-flask me-1"></i>Hal Tipi</label>
+                        <select class="form-select filter-input" name="halTipiFiltre">
+                            <option value="">Tümü</option>
+                            <option value="Katı" @(Model.HalTipiFiltre == "Katı" ? "selected" : "")>Katı</option>
+                            <option value="Sıvı" @(Model.HalTipiFiltre == "Sıvı" ? "selected" : "")>Sıvı</option>
+                            <option value="Gaz" @(Model.HalTipiFiltre == "Gaz" ? "selected" : "")>Gaz</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-filter me-2 w-100">
+                            <i class="fas fa-search me-2"></i>Filtrele
+                        </button>
+                    </div>
+                    <div class="col-md-12 d-flex justify-content-end">
+                        <a href="@Url.Action("GecmisSevkiyatlar", "Dashboard")" class="btn btn-reset">
+                            <i class="fas fa-redo me-2"></i>Filtreleri Temizle
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sevkiyat Listesi -->
+        @if (!Model.Sevkiyatlar.Any())
+        {
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                Filtrelemeye uygun sevkiyat kaydı bulunamadı.
+            </div>
+        }
+        else
+        {
+            @for (int i = 0; i < Model.Sevkiyatlar.Count; i++)
+            {
+                var sevkiyat = Model.Sevkiyatlar[i];
+                var collapseId = "sevkiyat-" + i;
+                
+                <div class="sevkiyat-card">
+                    <!-- Sevkiyat Başlık -->
+                    <div class="sevkiyat-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-2">
+                                    <i class="fas fa-truck me-2 text-primary"></i>
+                                    Sevkiyat #@(i + 1) - @sevkiyat.SevkiyatTarihi.ToString("dd MMMM yyyy")
+                                </h5>
+                                <div class="mb-2">
+                                    <span class="badge-custom bg-primary me-2">
+                                        <i class="fas fa-weight me-1"></i>@sevkiyat.ToplamMiktar.ToString("F2") ton
+                                    </span>
+                                    <span class="badge-custom bg-success me-2">
+                                        <i class="fas fa-building me-1"></i>@sevkiyat.FirmaSayisi Firma
+                                    </span>
+                                    <span class="badge-custom bg-warning me-2">
+                                        <i class="fas fa-boxes me-1"></i>@sevkiyat.AtikKayitSayisi Atık Kaydı
+                                    </span>
+                                    <span class="badge-custom @(sevkiyat.Durum == "Planlandı" ? "bg-info" : sevkiyat.Durum == "Tamamlandı" ? "bg-success" : "bg-danger")">
+                                        <i class="fas fa-info-circle me-1"></i>@sevkiyat.Durum
+                                    </span>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Oluşturulma: @sevkiyat.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm")
+                                </small>
+                                @if (!string.IsNullOrEmpty(sevkiyat.Notlar))
+                                {
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-sticky-note me-1"></i>
+                                            <strong>Not:</strong> @sevkiyat.Notlar
+                                        </small>
+                                    </div>
+                                }
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary collapsed collapse-toggle" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#@collapseId">
+                                    <i class="fas fa-chevron-down chevron-icon"></i>
+                                    Detayları Göster
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sevkiyat Detayları (Collapsible) -->
+                    <div class="collapse" id="@collapseId">
+                        <div class="sevkiyat-body">
+                            <h6 class="mb-3"><i class="fas fa-list me-2"></i>Atık Kayıtları</h6>
+                            
+                            @foreach (var atik in sevkiyat.AtikKayitlari)
+                            {
+                                <div class="atik-kayit-item">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="mb-2">
+                                                <strong class="text-primary">@atik.FirmaAdi</strong>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <small>
+                                                        <i class="fas fa-barcode me-1 text-primary"></i>
+                                                        <strong>Kod:</strong> <code>@atik.AtikKodu</code>
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small>
+                                                        <i class="fas fa-tag me-1 text-success"></i>
+                                                        <strong>Ad:</strong> @atik.AtikAdi
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small>
+                                                        <i class="fas fa-weight me-1 text-warning"></i>
+                                                        <strong>Miktar:</strong> 
+                                                        <span class="badge bg-primary">@atik.Miktar.ToString("F2") @atik.Birim</span>
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small>
+                                                        <i class="fas fa-flask me-1 text-info"></i>
+                                                        <strong>Hal Tipi:</strong> @atik.HalTipi
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-12">
+                                                    <small>
+                                                        <i class="fas fa-map-marker-alt me-1 text-danger"></i>
+                                                        <strong>Adres:</strong> @atik.Adres
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small>
+                                                        <i class="fas fa-calendar me-1 text-secondary"></i>
+                                                        <strong>Giriş:</strong> @atik.GirisTarihi.ToString("dd.MM.yyyy HH:mm")
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small>
+                                                        <i class="fas fa-check-circle me-1 @(atik.SevkEdildiMi ? "text-success" : "text-muted")"></i>
+                                                        <strong>Durum:</strong> @(atik.SevkEdildiMi ? "Sevk Edildi" : "Bekliyor")
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-center">
+                                            @if (!string.IsNullOrEmpty(atik.GorselUrl))
+                                            {
+                                                <img src="@atik.GorselUrl" 
+                                                     class="gorsel-thumbnail img-thumbnail" 
+                                                     alt="Atık görseli"
+                                                     onclick="window.open('@atik.GorselUrl', '_blank')" />
+                                                <br>
+                                                <small class="text-muted">Görseli büyütmek için tıklayın</small>
+                                            }
+                                            else
+                                            {
+                                                <div class="text-muted">
+                                                    <i class="fas fa-image fa-3x mb-2 opacity-25"></i>
+                                                    <br>
+                                                    <small>Görsel yok</small>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>
