@@ -20,6 +20,7 @@ builder.Services.Configure<MongoDbSettings>(
 builder.Services.AddSingleton<IAtikKayitService, AtikKayitService>();
 builder.Services.AddSingleton<IKullaniciService, KullaniciService>();
 builder.Services.AddScoped<IBildirimService, BildirimService>();
+builder.Services.AddScoped<ISevkiyatService, SevkiyatService>();
 
 // Session
 builder.Services.AddSession(options =>

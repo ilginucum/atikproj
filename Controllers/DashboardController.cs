@@ -11,12 +11,15 @@ namespace AtikProj.Controllers
          private readonly IAtikKayitService _atikKayitService;
          private readonly IKullaniciService _kullaniciService;
          private readonly IBildirimService _bildirimService;
+         private readonly ISevkiyatService _sevkiyatService;
 
-        public DashboardController(IAtikKayitService atikKayitService, IKullaniciService kullaniciService, IBildirimService bildirimService) 
+
+        public DashboardController(IAtikKayitService atikKayitService, IKullaniciService kullaniciService, IBildirimService bildirimService, ISevkiyatService sevkiyatService) 
         {
             _atikKayitService = atikKayitService;
             _kullaniciService = kullaniciService;
             _bildirimService = bildirimService;
+            _sevkiyatService = sevkiyatService;
         }
         public async Task<IActionResult> Index()
         {
@@ -79,7 +82,30 @@ namespace AtikProj.Controllers
         // Yeni action ekle:
         public async Task<IActionResult> Bildirimler()
         {
-            var bildirimler = await _bildirimService.GetAllAsync();
+            var kullaniciId = HttpContext.Session.GetString("KullaniciId");
+            var rol = HttpContext.Session.GetString("Rol");
+            
+            var tumBildirimler = await _bildirimService.GetAllAsync();
+            
+            List<Bildirim> bildirimler;
+            
+            if (rol == "Admin")
+            {
+                // Admin sadece HedefKullaniciId null olan veya kendi ID'sine özel bildirimleri görsün
+                bildirimler = tumBildirimler
+                    .Where(b => string.IsNullOrEmpty(b.HedefKullaniciId) || b.HedefKullaniciId == kullaniciId)
+                    .OrderByDescending(b => b.OlusturmaTarihi)
+                    .ToList();
+            }
+            else
+            {
+                // User sadece kendi bildirimlerini görsün
+                bildirimler = tumBildirimler
+                    .Where(b => b.HedefKullaniciId == kullaniciId)
+                    .OrderByDescending(b => b.OlusturmaTarihi)
+                    .ToList();
+            }
+            
             return View(bildirimler);
         }
 
@@ -87,9 +113,28 @@ namespace AtikProj.Controllers
         [HttpGet]
         public async Task<JsonResult> GetOkunmamisBildirimSayisi()
         {
-            var sayi = await _bildirimService.GetOkunmamisSayisi();
+            var kullaniciId = HttpContext.Session.GetString("KullaniciId");
+            var rol = HttpContext.Session.GetString("Rol");
+            
+            var tumBildirimler = await _bildirimService.GetOkunmamisBildirimlerAsync();
+            
+            int sayi;
+            
+            if (rol == "Admin")
+            {
+                // Admin sadece HedefKullaniciId null olan veya kendi ID'sine özel bildirimleri sayar
+                sayi = tumBildirimler
+                    .Count(b => string.IsNullOrEmpty(b.HedefKullaniciId) || b.HedefKullaniciId == kullaniciId);
+            }
+            else
+            {
+                // User sadece kendi bildirimlerini sayar
+                sayi = tumBildirimler
+                    .Count(b => b.HedefKullaniciId == kullaniciId);
+            }
+            
             return Json(new { sayi });
-        }
+}
 
         // Bildirimi okundu işaretle
         [HttpPost]
@@ -136,6 +181,157 @@ namespace AtikProj.Controllers
             }
         }
 
+        // Sevkiyat planlama sayfası
+        public async Task<IActionResult> SevkiyatPlanla()
+        {
+            var tumAktifAtiklar = await _atikKayitService.GetAktifAtiklar();
+            
+            // Atık noktalarına göre grupla
+            var atikNoktaGruplari = new List<AtikNoktaDetay>();
+
+            foreach (var grup in tumAktifAtiklar.GroupBy(a => a.AtikNoktasiId))
+            {
+                var firmaAdi = await GetFirmaAdiAsync(grup.Key);
+                
+                atikNoktaGruplari.Add(new AtikNoktaDetay
+                {
+                    NoktaAdi = firmaAdi,
+                    ToplamMiktar = grup.Sum(a => a.MiktarTon),
+                    AtikSayisi = grup.Count(),
+                    AtikKayitlari = grup.ToList()
+                });
+            }
+
+            atikNoktaGruplari = atikNoktaGruplari.OrderByDescending(n => n.ToplamMiktar).ToList();
+            
+            var model = new SevkiyatPlanlaViewModel
+            {
+                AtikNoktaGruplari = atikNoktaGruplari,
+                ToplamAktifAtik = tumAktifAtiklar.Sum(a => a.MiktarTon)
+            };
+            
+            return View(model);
+        }
+        // Sevkiyat oluştur
+
+        [HttpPost]
+        public async Task<IActionResult> SevkiyatOlustur(DateTime sevkiyatTarihi, string seciliAtikIds, string notlar)
+        {
+            try
+            {
+                var atikIdler = seciliAtikIds.Split(',').ToList();
+                
+                if (!atikIdler.Any())
+                {
+                    return Json(new { success = false, message = "Lütfen en az bir atık seçin!" });
+                }
+
+                // Seçilen atıkları getir
+                var seciliAtiklar = new List<AtikKayit>();
+                var atikNoktasiIds = new HashSet<string>();
+                
+                foreach (var atikId in atikIdler)
+                {
+                    var atik = await _atikKayitService.GetByIdAsync(atikId);
+                    if (atik != null)
+                    {
+                        seciliAtiklar.Add(atik);
+                        atikNoktasiIds.Add(atik.AtikNoktasiId);
+                    }
+                }
+
+                var toplamMiktar = seciliAtiklar.Sum(a => a.MiktarTon);
+                var kullaniciId = HttpContext.Session.GetString("KullaniciId");
+
+                // Sevkiyat oluştur
+                var sevkiyat = new Sevkiyat
+                {
+                    SevkiyatTarihi = sevkiyatTarihi,
+                    Durum = "Planlandı",
+                    ToplamMiktar = toplamMiktar,
+                    AtikKayitIds = atikIdler,
+                    AtikNoktasiIds = atikNoktasiIds.ToList(),
+                    OlusturmaTarihi = DateTime.Now,
+                    OlusturanKullaniciId = kullaniciId ?? "",
+                    Notlar = notlar
+                };
+
+                await _sevkiyatService.CreateAsync(sevkiyat);
+
+                // Seçilen atıkları "sevk edildi" olarak işaretle
+                foreach (var atikId in atikIdler)
+                {
+                    var atik = await _atikKayitService.GetByIdAsync(atikId);
+                    if (atik != null)
+                    {
+                        atik.SevkEdildiMi = true;
+                        await _atikKayitService.UpdateAsync(atikId, atik);
+                    }
+                }
+
+                // Her fabrikaya bildirim gönder
+                var tumKullanicilar = await _kullaniciService.GetAllAsync();
+                
+                foreach (var noktaId in atikNoktasiIds)
+                {
+                    var kullanici = tumKullanicilar.FirstOrDefault(k => k.AtikNoktasiId == noktaId);
+                    if (kullanici != null)
+                    {
+                        // Firma için özel mesaj oluştur
+                        var mesaj = $"🚚 Sevkiyat Planlandı! {sevkiyatTarihi.ToString("dd.MM.yyyy")} tarihinde atıklarınız toplanacaktır. Lütfen hazır bulunun.";
+                        
+                        // Not varsa ekle
+                        if (!string.IsNullOrEmpty(notlar))
+                        {
+                            mesaj += $"\n\n📝 Not: {notlar}";
+                        }
+                        
+                        var fabrikaBildirimi = new Bildirim
+                        {
+                            Mesaj = mesaj,
+                            OlusturmaTarihi = DateTime.Now,
+                            Okundu = false,
+                            ToplamMiktar = seciliAtiklar.Where(a => a.AtikNoktasiId == noktaId).Sum(a => a.MiktarTon),
+                            BildirimTipi = "SevkiyatBildirimi",
+                            IlgiliSevkiyatId = sevkiyat.Id,
+                            HedefKullaniciId = kullanici.Id
+                        };
+
+                        await _bildirimService.CreateAsync(fabrikaBildirimi);
+                    }
+                }
+
+                // Admin'e de onay bildirimi
+                var adminMesaj = $"✅ Sevkiyat başarıyla planlandı! {atikNoktasiIds.Count} firma, {seciliAtiklar.Count} atık kaydı. Toplam: {toplamMiktar:F2} ton";
+                
+                if (!string.IsNullOrEmpty(notlar))
+                {
+                    adminMesaj += $"\n\n📝 Not: {notlar}";
+                }
+                
+                var adminBildirimi = new Bildirim
+                {
+                    Mesaj = adminMesaj,
+                    OlusturmaTarihi = DateTime.Now,
+                    Okundu = false,
+                    ToplamMiktar = toplamMiktar,
+                    BildirimTipi = "BilgiMesaji",
+                    IlgiliSevkiyatId = sevkiyat.Id
+                };
+
+                await _bildirimService.CreateAsync(adminBildirimi);
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Sevkiyat planlandı! {atikNoktasiIds.Count} firmaya bildirim gönderildi.",
+                    sevkiyatId = sevkiyat.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Hata: " + ex.Message });
+            }
+        }
     public IActionResult Map()
     {
         var atiklar1 = new List<AtikDetay>

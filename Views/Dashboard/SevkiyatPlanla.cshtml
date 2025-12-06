@@ -1,0 +1,379 @@
+@model AtikProj.Models.SevkiyatPlanlaViewModel
+
+@{
+    ViewData["Title"] = "Sevkiyat Planla";
+    Layout = "_Layout";
+}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .nokta-card {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .nokta-card:hover {
+        border-color: #10b981;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .nokta-card.selected {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+
+    .atik-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .atik-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .secim-ozeti {
+        position: sticky;
+        top: 20px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-planla {
+        background: white;
+        color: #10b981;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        width: 100%;
+        transition: all 0.3s;
+    }
+
+    .btn-planla:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+        color: #059669;
+    }
+
+    .btn-planla:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 1rem;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-2">
+                    <i class="fas fa-truck-loading me-2"></i>Sevkiyat Planla
+                </h2>
+                <p class="mb-0 opacity-75">Toplanacak atıkları seçin ve tarih belirleyin</p>
+            </div>
+            <div>
+                <span class="badge bg-white text-success fs-5">
+                    <i class="fas fa-weight-hanging me-2"></i>
+                    Toplam: @Model.ToplamAktifAtik.ToString("F2") ton
+                </span>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.AtikNoktaGruplari.Any())
+    {
+        <div class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h4 class="mt-3 mb-2">Henüz aktif atık kaydı bulunmuyor</h4>
+            <p class="text-muted">Sevkiyat planlamak için önce atık kayıtları oluşturulmalıdır.</p>
+            <a href="@Url.Action("Index", "Dashboard")" class="btn btn-primary mt-3">
+                <i class="fas fa-arrow-left me-2"></i>Dashboard'a Dön
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Sol: Atık Noktaları -->
+            <div class="col-lg-8">
+                <div class="section-card">
+                    <h4 class="mb-4">
+                        <i class="fas fa-map-marker-alt me-2 text-success"></i>
+                        Atık Noktaları ve Kayıtlar
+                    </h4>
+
+                    @foreach (var nokta in Model.AtikNoktaGruplari)
+                    {
+                        var ilkAtik = nokta.AtikKayitlari.FirstOrDefault();
+                        
+                        if (ilkAtik != null)
+                        {
+                            <div class="nokta-card" data-nokta-id="@ilkAtik.AtikNoktasiId">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h5 class="mb-1">
+                                            <input type="checkbox" class="form-check-input me-2 nokta-checkbox" 
+                                                   data-nokta="@ilkAtik.AtikNoktasiId">
+                                            <i class="fas fa-building me-2"></i>@nokta.NoktaAdi
+                                        </h5>
+                                        <small class="text-muted">@nokta.AtikSayisi atık kaydı</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <h4 class="text-success mb-0">@nokta.ToplamMiktar.ToString("F2") ton</h4>
+                                    </div>
+                                </div>
+
+                                <div class="atik-listesi">
+                                    @foreach (var atik in nokta.AtikKayitlari)
+                                    {
+                                        <div class="atik-item">
+                                            <input type="checkbox" class="atik-checkbox" 
+                                                   data-atik-id="@atik.Id"
+                                                   data-miktar="@atik.MiktarTon"
+                                                   data-nokta="@atik.AtikNoktasiId">
+                                            <div class="flex-grow-1">
+                                                <strong>@atik.AtikKodu</strong> - @atik.AtikAdi
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-weight me-1"></i>@atik.Miktar.ToString("F2") @atik.Birim
+                                                    <i class="fas fa-calendar ms-3 me-1"></i>@atik.GirisTarihi.ToString("dd.MM.yyyy")
+                                                </small>
+                                            </div>
+                                            <span class="badge bg-success">@atik.MiktarTon.ToString("F2") ton</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Sağ: Seçim Özeti ve Tarih -->
+            <div class="col-lg-4">
+                <div class="secim-ozeti">
+                    <h4 class="mb-4">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        Seçim Özeti
+                    </h4>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Seçili Firma:</span>
+                            <strong id="secilifirma">0</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Seçili Atık:</span>
+                            <strong id="seciliatik">0</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 pb-3 border-bottom">
+                            <span>Toplam Miktar:</span>
+                            <strong id="toplamMiktar">0.00 ton</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Sevkiyat Tarihi
+                        </label>
+                        <input type="date" id="sevkiyatTarihi" class="form-control form-control-lg" 
+                               min="@DateTime.Now.ToString("yyyy-MM-dd")" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-sticky-note me-2"></i>
+                            Notlar (Opsiyonel)
+                        </label>
+                        <textarea id="notlar" class="form-control" rows="3" 
+                                  placeholder="Sevkiyat ile ilgili notlar..."></textarea>
+                    </div>
+
+                    <button id="btnPlanla" class="btn-planla" disabled>
+                        <i class="fas fa-check-circle me-2"></i>
+                        Sevkiyatı Planla
+                    </button>
+
+                    <div class="mt-3 text-center">
+                        <a href="@Url.Action("Index", "Dashboard")" class="text-white text-decoration-none">
+                            <i class="fas fa-arrow-left me-1"></i> Dashboard'a Dön
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        let seciliAtiklar = new Set();
+        let seciliFirmalar = new Set();
+        let toplamMiktar = 0;
+
+        // Toastr ayarları
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000"
+        };
+
+        // Firma checkbox'ı değiştiğinde
+        $('.nokta-checkbox').change(function() {
+            const noktaId = $(this).data('nokta');
+            const isChecked = $(this).is(':checked');
+            
+            $(this).closest('.nokta-card').find('.atik-checkbox').prop('checked', isChecked).trigger('change');
+            
+            if (isChecked) {
+                $(this).closest('.nokta-card').addClass('selected');
+            } else {
+                $(this).closest('.nokta-card').removeClass('selected');
+            }
+        });
+
+        // Atık checkbox'ı değiştiğinde
+        $('.atik-checkbox').change(function() {
+            const atikId = $(this).data('atik-id');
+            const miktar = parseFloat($(this).data('miktar'));
+            const noktaId = $(this).data('nokta');
+            
+            if ($(this).is(':checked')) {
+                seciliAtiklar.add(atikId);
+                seciliFirmalar.add(noktaId);
+                toplamMiktar += miktar;
+            } else {
+                seciliAtiklar.delete(atikId);
+                toplamMiktar -= miktar;
+                
+                // Bu firmadan başka seçili atık var mı?
+                const noktadakiSeciliAtiklar = $(`.atik-checkbox[data-nokta="${noktaId}"]:checked`).length;
+                if (noktadakiSeciliAtiklar === 0) {
+                    seciliFirmalar.delete(noktaId);
+                    $(`.nokta-checkbox[data-nokta="${noktaId}"]`).prop('checked', false);
+                    $(`.nokta-checkbox[data-nokta="${noktaId}"]`).closest('.nokta-card').removeClass('selected');
+                }
+            }
+            
+            guncelleOzet();
+        });
+
+        function guncelleOzet() {
+            $('#secilifirma').text(seciliFirmalar.size);
+            $('#seciliatik').text(seciliAtiklar.size);
+            $('#toplamMiktar').text(toplamMiktar.toFixed(2) + ' ton');
+            
+            // Planla butonunu aktifleştir/pasifleştir
+            if (seciliAtiklar.size > 0 && $('#sevkiyatTarihi').val()) {
+                $('#btnPlanla').prop('disabled', false);
+            } else {
+                $('#btnPlanla').prop('disabled', true);
+            }
+        }
+
+        // Tarih değiştiğinde
+        $('#sevkiyatTarihi').change(function() {
+            guncelleOzet();
+        });
+
+        // Planla butonu
+        $('#btnPlanla').click(function() {
+            const sevkiyatTarihi = $('#sevkiyatTarihi').val();
+            const notlar = $('#notlar').val();
+            
+            if (!sevkiyatTarihi) {
+                toastr.error('Lütfen sevkiyat tarihini seçin!');
+                return;
+            }
+
+            if (seciliAtiklar.size === 0) {
+                toastr.error('Lütfen en az bir atık seçin!');
+                return;
+            }
+
+            if (confirm(`${seciliFirmalar.size} firmadan ${seciliAtiklar.size} atık kaydı (${toplamMiktar.toFixed(2)} ton) için sevkiyat planlamak istediğinize emin misiniz?`)) {
+                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>İşleniyor...');
+                
+                $.ajax({
+                    url: '@Url.Action("SevkiyatOlustur", "Dashboard")',
+                    type: 'POST',
+                    data: {
+                        sevkiyatTarihi: sevkiyatTarihi,
+                        seciliAtikIds: Array.from(seciliAtiklar).join(','),
+                        notlar: notlar
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            setTimeout(function() {
+                                window.location.href = '@Url.Action("Index", "Dashboard")';
+                            }, 2000);
+                        } else {
+                            toastr.error(response.message);
+                            $('#btnPlanla').prop('disabled', false).html('<i class="fas fa-check-circle me-2"></i>Sevkiyatı Planla');
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Bir hata oluştu!');
+                        $('#btnPlanla').prop('disabled', false).html('<i class="fas fa-check-circle me-2"></i>Sevkiyatı Planla');
+                    }
+                });
+            }
+        });
+    });
+</script>

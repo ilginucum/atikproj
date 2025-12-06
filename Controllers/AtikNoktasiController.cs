@@ -16,7 +16,6 @@ namespace AtikProj.Controllers
             _atikKayitService = atikKayitService;
             _bildirimService = bildirimService;
         }
-
         private (string kullaniciId, string atikNoktasiId, string firmaAdi) GetCurrentUser()
         {
             var kullaniciId = HttpContext.Session.GetString("KullaniciId") ?? "";
@@ -802,7 +801,8 @@ namespace AtikProj.Controllers
                             OlusturmaTarihi = DateTime.Now,
                             Okundu = false,
                             ToplamMiktar = toplamMiktar,
-                            BildirimTipi = "10TonUyarisi"
+                            BildirimTipi = "10TonUyarisi",
+                            HedefKullaniciId = null 
                         };
 
                         await _bildirimService.CreateAsync(bildirim);
@@ -842,7 +842,8 @@ namespace AtikProj.Controllers
                             OlusturmaTarihi = DateTime.Now,
                             Okundu = false,
                             ToplamMiktar = toplamMiktar,
-                            BildirimTipi = "5TonUyarisi"
+                            BildirimTipi = "5TonUyarisi",
+                            HedefKullaniciId = null 
                         };
 
                         await _bildirimService.CreateAsync(bildirim);
@@ -867,20 +868,26 @@ namespace AtikProj.Controllers
         }
         public async Task<IActionResult> Panel()
         {
-            // Session'dan kullanıcının kendi atık noktası ID'sini al
-            var (_, atikNoktasiId, firmaAdi) = GetCurrentUser();
+            var (kullaniciId, atikNoktasiId, firmaAdi) = GetCurrentUser();
             
-            // Sadece bu kullanıcının kayıtlarını getir
             var kayitlar = await _atikKayitService.GetByNoktaIdAsync(atikNoktasiId);
-            
-            // Toplam aktif atık miktarını hesapla (sevk edilmemiş)
             var toplamAktif = kayitlar.Where(k => !k.SevkEdildiMi).Sum(k => k.MiktarTon);
+            
+            // Kullanıcıya özel bildirimleri getir
+            var tumBildirimler = await _bildirimService.GetAllAsync();
+            var kullaniciBildirimleri = tumBildirimler
+                .Where(b => b.HedefKullaniciId == kullaniciId || b.BildirimTipi == "SevkiyatBildirimi")
+                .OrderByDescending(b => b.OlusturmaTarihi)
+                .Take(5)
+                .ToList();
             
             ViewBag.FirmaAdi = firmaAdi;
             ViewBag.ToplamAktifAtik = toplamAktif;
+            ViewBag.Bildirimler = kullaniciBildirimleri;
             
             return View(kayitlar.OrderByDescending(k => k.GirisTarihi).ToList());
         }
+
         [HttpPost]
         public async Task<IActionResult> AtikSil(string id)
         {
@@ -929,7 +936,8 @@ namespace AtikProj.Controllers
                             OlusturmaTarihi = DateTime.Now,
                             Okundu = false,
                             ToplamMiktar = toplamMiktar,
-                            BildirimTipi = "BilgiMesaji"
+                            BildirimTipi = "BilgiMesaji",
+                            HedefKullaniciId = null 
                         };
 
                         await _bildirimService.CreateAsync(bilgiBildirimi);
@@ -953,6 +961,60 @@ namespace AtikProj.Controllers
                 }
 
                 return Json(new { success = true, message = "Atık başarıyla silindi!" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // Bildirim sil
+        [HttpPost]
+        public async Task<JsonResult> BildirimSil(string id)
+        {
+            try
+            {
+                var (kullaniciId, _, _) = GetCurrentUser();
+                
+                // Güvenlik kontrolü: Bildirim bu kullanıcıya ait mi?
+                var bildirim = await _bildirimService.GetByIdAsync(id);
+                
+                if (bildirim == null)
+                {
+                    return Json(new { success = false, message = "Bildirim bulunamadı!" });
+                }
+                
+                if (bildirim.HedefKullaniciId != kullaniciId)
+                {
+                    return Json(new { success = false, message = "Bu bildirimi silme yetkiniz yok!" });
+                }
+                
+                await _bildirimService.DeleteAsync(id);
+                return Json(new { success = true, message = "Bildirim silindi" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        // Tüm bildirimleri temizle
+        [HttpPost]
+        public async Task<JsonResult> TumBildirimleriTemizle()
+        {
+            try
+            {
+                var (kullaniciId, _, _) = GetCurrentUser();
+                
+                var tumBildirimler = await _bildirimService.GetAllAsync();
+                var kullaniciBildirimleri = tumBildirimler.Where(b => b.HedefKullaniciId == kullaniciId).ToList();
+                
+                foreach (var bildirim in kullaniciBildirimleri)
+                {
+                    await _bildirimService.DeleteAsync(bildirim.Id);
+                }
+                
+                return Json(new { success = true, message = $"{kullaniciBildirimleri.Count} bildirim temizlendi" });
             }
             catch (Exception ex)
             {

@@ -15,9 +15,12 @@ namespace AtikProj.Models
         
         public bool Okundu { get; set; } = false;
         
-        // Admin bildirimleri için kullanılacak
         public decimal ToplamMiktar { get; set; }
         
-        public string BildirimTipi { get; set; } = "10TonUyarisi"; // 10TonUyarisi, SevkiyatBildirimi vs.
+        public string BildirimTipi { get; set; } = "10TonUyarisi"; // 10TonUyarisi, 5TonUyarisi, SevkiyatBildirimi, BilgiMesaji
+        
+        public string? IlgiliSevkiyatId { get; set; } // Sevkiyat bildirimleri için
+        
+        public string? HedefKullaniciId { get; set; } // Fabrika kullanıcılarına özel bildirim için
     }
 }

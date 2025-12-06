@@ -75,6 +75,22 @@
             font-weight: 600;
         }
 
+        .btn-back {
+            background-color: #94a3b8;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-back:hover {
+            background-color: #64748b;
+            color: white;
+        }
+
         .validation-message {
             display: none;
             color: var(--danger-color);
@@ -153,7 +169,7 @@
                         <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Yeni Atık Girişi</h4>
                     </div>
                     <div class="card-body p-4">
-                        <form id="atikGirisForm">
+                        <form id="atikGirisForm" enctype="multipart/form-data">
                             
                             <!-- Atık Kodu -->
                             <div class="mb-4">
@@ -195,7 +211,7 @@
                             <!-- Miktar -->
                             <div class="mb-4">
                                 <label for="miktar" class="form-label">
-                                    <i class="fas fa-weight me-1"></i>Miktar *
+                                    <i class="fas fa-weight me-1"></i>Yaklaşık Atık Miktarı *
                                 </label>
                                 <input type="number" 
                                        class="form-control" 
@@ -225,6 +241,53 @@
                                 </div>
                             </div>
 
+                            <!-- Hal Tipi -->
+                            <div class="mb-4">
+                                <label for="halTipi" class="form-label">
+                                    <i class="fas fa-flask me-1"></i>Hal Tipi *
+                                </label>
+                                <select class="form-select" id="halTipi" name="halTipi" required>
+                                    <option value="">Seçiniz</option>
+                                    <option value="Katı">Katı</option>
+                                    <option value="Sıvı">Sıvı</option>
+                                </select>
+                                <div id="halTipiError" class="validation-message">
+                                    Lütfen bir hal tipi seçiniz!
+                                </div>
+                            </div>
+
+                            <!-- Adres -->
+                            <div class="mb-4">
+                                <label for="adres" class="form-label">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Adres *
+                                </label>
+                                <textarea class="form-control" 
+                                          id="adres" 
+                                          name="adres" 
+                                          rows="3" 
+                                          placeholder="Atığın bulunduğu adres" 
+                                          required></textarea>
+                                <div id="adresError" class="validation-message">
+                                    Lütfen adres giriniz!
+                                </div>
+                            </div>
+
+                            <!-- Görsel (Opsiyonel) -->
+                            <div class="mb-4">
+                                <label for="gorsel" class="form-label">
+                                    <i class="fas fa-image me-1"></i>Görsel (Opsiyonel)
+                                </label>
+                                <input type="file" 
+                                       class="form-control" 
+                                       id="gorsel" 
+                                       name="gorsel" 
+                                       accept="image/*">
+                                <small class="info-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Atık fotoğrafı ekleyebilirsiniz (JPG, PNG)
+                                </small>
+                            </div>
+
                             <!-- Butonlar -->
                             <div class="d-flex gap-2">
                                 <button type="submit" id="submitBtn" class="btn btn-primary" disabled>
@@ -233,6 +296,9 @@
                                 <button type="reset" class="btn btn-secondary">
                                     <i class="fas fa-undo me-2"></i>Temizle
                                 </button>
+                                <a href="@Url.Action("Panel", "AtikNoktasi")" class="btn btn-back">
+                                    <i class="fas fa-arrow-left me-2"></i>Panele Dön
+                                </a>
                             </div>
 
                         </form>
@@ -334,6 +400,33 @@
                 checkFormValidity();
             });
 
+            // Hal Tipi kontrolü
+            $('#halTipi').on('change', function() {
+                if ($(this).val() !== '') {
+                    $(this).removeClass('is-invalid').addClass('is-valid');
+                    $('#halTipiError').removeClass('show');
+                } else {
+                    $(this).removeClass('is-valid').addClass('is-invalid');
+                    $('#halTipiError').addClass('show');
+                }
+                checkFormValidity();
+            });
+
+            // Adres kontrolü
+            $('#adres').on('input blur', function() {
+                if ($(this).val().trim() !== '') {
+                    $(this).removeClass('is-invalid').addClass('is-valid');
+                    $('#adresError').removeClass('show');
+                } else if ($(this).val().trim() === '' && $(this).is(':focus') === false) {
+                    $(this).removeClass('is-valid').addClass('is-invalid');
+                    $('#adresError').addClass('show');
+                } else {
+                    $(this).removeClass('is-valid is-invalid');
+                    $('#adresError').removeClass('show');
+                }
+                checkFormValidity();
+            });
+
             // Form submit - MONGODB ENTEGRASYONU
             $('#atikGirisForm').on('submit', function(e) {
                 e.preventDefault();
@@ -343,25 +436,39 @@
                     return;
                 }
 
-                var formData = {
-                    atikKodu: $('#atikKodu').val(),
-                    atikAdi: $('#atikAdi').val(),
-                    miktar: $('#miktar').val(),
-                    birim: $('#birim').val()
-                };
+                var formData = new FormData();
+                formData.append('atikKodu', $('#atikKodu').val());
+                formData.append('atikAdi', $('#atikAdi').val());
+                formData.append('miktar', $('#miktar').val());
+                formData.append('birim', $('#birim').val());
+                formData.append('halTipi', $('#halTipi').val());
+                formData.append('adres', $('#adres').val());
+                
+                var gorselFile = $('#gorsel')[0].files[0];
+                if (gorselFile) {
+                    formData.append('gorsel', gorselFile);
+                }
 
                 // MongoDB'ye kaydet
-                $.post('/AtikNoktasi/AtikKaydet', formData, function(response) {
-                    if (response.success) {
-                        alert('✅ ' + response.message + 
-                              '\n\n📊 Toplam Aktif Atık: ' + response.toplamMiktar.toFixed(2) + ' ton' +
-                              (response.uyari ? '\n\n⚠️ ' + response.uyari : ''));
-                        resetForm();
-                    } else {
-                        alert('❌ Hata: ' + response.message);
+                $.ajax({
+                    url: '/AtikNoktasi/AtikKaydet',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            alert('✅ ' + response.message + 
+                                  '\n\n📊 Toplam Aktif Atık: ' + response.toplamMiktar.toFixed(2) + ' ton' +
+                                  (response.uyari ? '\n\n⚠️ ' + response.uyari : ''));
+                            resetForm();
+                        } else {
+                            alert('❌ Hata: ' + response.message);
+                        }
+                    },
+                    error: function() {
+                        alert('❌ Bağlantı hatası! Lütfen tekrar deneyin.');
                     }
-                }).fail(function() {
-                    alert('❌ Bağlantı hatası! Lütfen tekrar deneyin.');
                 });
             });
 
@@ -374,8 +481,10 @@
             function checkFormValidity() {
                 var miktar = parseFloat($('#miktar').val());
                 var birim = $('#birim').val();
+                var halTipi = $('#halTipi').val();
+                var adres = $('#adres').val().trim();
                 
-                if (kodGecerli && miktar > 0 && birim !== '') {
+                if (kodGecerli && miktar > 0 && birim !== '' && halTipi !== '' && adres !== '') {
                     $('#submitBtn').prop('disabled', false);
                 } else {
                     $('#submitBtn').prop('disabled', true);
