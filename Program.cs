@@ -16,11 +16,15 @@ builder.Services.AddControllersWithViews()
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+
 // Dependency Injection - Services
 builder.Services.AddSingleton<IAtikKayitService, AtikKayitService>();
 builder.Services.AddSingleton<IKullaniciService, KullaniciService>();
 builder.Services.AddScoped<IBildirimService, BildirimService>();
 builder.Services.AddScoped<ISevkiyatService, SevkiyatService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Session
 builder.Services.AddSession(options =>

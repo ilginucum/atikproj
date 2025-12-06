@@ -10,12 +10,22 @@ namespace AtikProj.Controllers
     {
         private readonly IAtikKayitService _atikKayitService;
         private readonly IBildirimService _bildirimService;
+        private readonly IEmailService _emailService; 
 
-        public AtikNoktasiController(IAtikKayitService atikKayitService, IBildirimService bildirimService)
+        private static readonly List<string> ADMIN_EMAILS = new List<string>
         {
-            _atikKayitService = atikKayitService;
-            _bildirimService = bildirimService;
-        }
+            "cilgin.ucum@gmail.com"
+        };
+
+    public AtikNoktasiController(
+        IAtikKayitService atikKayitService, 
+        IBildirimService bildirimService,
+        IEmailService emailService)
+    {
+        _atikKayitService = atikKayitService;
+        _bildirimService = bildirimService;
+        _emailService = emailService; 
+    }
         private (string kullaniciId, string atikNoktasiId, string firmaAdi) GetCurrentUser()
         {
             var kullaniciId = HttpContext.Session.GetString("KullaniciId") ?? "";
@@ -806,6 +816,23 @@ namespace AtikProj.Controllers
                         };
 
                         await _bildirimService.CreateAsync(bildirim);
+
+                        // TÜM ADMİNLERE EMAIL GÖNDER
+                        try
+                        {
+                            foreach (var adminEmail in ADMIN_EMAILS)
+                            {
+                                await _emailService.SendBildirimEmailAsync(
+                                    adminEmail,
+                                    "Huş Mühendislik Admin",
+                                    bildirim
+                                );
+                            }
+                        }
+                        catch (Exception emailEx)
+                        {
+                            Console.WriteLine($"Email gönderme hatası: {emailEx.Message}");
+                        }
                     }
                 }
                 // ⭐ 5 TON KONTROLÜ (10 tondan önce)
@@ -847,6 +874,23 @@ namespace AtikProj.Controllers
                         };
 
                         await _bildirimService.CreateAsync(bildirim);
+
+                        // TÜM ADMİNLERE EMAIL GÖNDER
+                        try
+                        {
+                            foreach (var adminEmail in ADMIN_EMAILS)
+                            {
+                                await _emailService.SendBildirimEmailAsync(
+                                    adminEmail,
+                                    "Huş Mühendislik Admin",
+                                    bildirim
+                                );
+                            }
+                        }
+                        catch (Exception emailEx)
+                        {
+                            Console.WriteLine($"Email gönderme hatası: {emailEx.Message}");
+                        }
                     }
                 }
 
